@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { Search, Mail, Phone, Eye, Edit, Bot, Home, ClipboardList, MessageCircle, UserPlus, Clock, CheckCircle2, PhoneCall, XCircle, ArrowUpDown, ChevronDown, FileText } from "lucide-react";
+import { Search, Mail, Phone, Eye, Edit, Bot, Home, ClipboardList, MessageCircle, UserPlus, Clock, CheckCircle2, PhoneCall, XCircle, ArrowUpDown, ChevronDown, FileText, Download, Trash2, Filter, Calendar, BarChart3, ChevronLeft, ChevronRight, CheckSquare, Square } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
 
@@ -39,22 +39,83 @@ export default function InteresadosPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [originFilter, setOriginFilter] = useState('');
+    const [dateFilter, setDateFilter] = useState('todos'); // 'todos', 'hoy', 'semana', 'mes'
     const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
+    // New state for pagination and bulk actions
+    const [pageSize] = useState(25);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [isExporting, setIsExporting] = useState(false);
+    const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+
     useEffect(() => {
         fetchLeads();
+    }, [currentPage, statusFilter, originFilter, dateFilter, sortConfig]);
+
+    // Independent effect for counts to keep them updated
+    useEffect(() => {
+        fetchSummaryStats();
     }, []);
+
+    const fetchSummaryStats = async () => {
+        const { data, error } = await supabase.from('interesados').select('estado');
+        if (!error && data) {
+            const counts = data.reduce((acc: Record<string, number>, lead) => {
+                const estado = lead.estado || 'Nuevo';
+                acc[estado] = (acc[estado] || 0) + 1;
+                return acc;
+            }, {});
+            setStatusCounts(counts);
+        }
+    };
 
     const fetchLeads = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('interesados')
-            .select('*, updated_by_profile:profiles!interesados_updated_by_fkey(first_name, last_name)')
-            .order('created_at', { ascending: false });
-        if (error) console.error('Error fetching leads:', error);
-        else setLeads(data || []);
-        setLoading(false);
+        try {
+            let query = supabase
+                .from('interesados')
+                .select('*, updated_by_profile:profiles!interesados_updated_by_fkey(first_name, last_name)', { count: 'exact' });
+
+            // Apply Filters
+            if (statusFilter) query = query.eq('estado', statusFilter);
+            if (originFilter) query = query.eq('origen', originFilter);
+
+            if (dateFilter !== 'todos') {
+                const now = new Date();
+                let startDate = new Date();
+                if (dateFilter === 'hoy') startDate.setHours(0, 0, 0, 0);
+                else if (dateFilter === 'semana') startDate.setDate(now.getDate() - 7);
+                else if (dateFilter === 'mes') startDate.setMonth(now.getMonth() - 1);
+                query = query.gte('created_at', startDate.toISOString());
+            }
+
+            if (searchTerm) {
+                // Supabase doesn't easily support multi-column OR search in a simple way with pagination efficiently
+                // So we'll use a text search if available or filter on name/email/phone
+                query = query.or(`nombre_completo.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,telefono.ilike.%${searchTerm}%,codigo.ilike.%${searchTerm}%`);
+            }
+
+            // Apply Sort
+            query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
+
+            // Apply Pagination
+            const from = (currentPage - 1) * pageSize;
+            const to = from + pageSize - 1;
+            query = query.range(from, to);
+
+            const { data, error, count } = await query;
+
+            if (error) throw error;
+            setLeads(data || []);
+            setTotalCount(count || 0);
+        } catch (error) {
+            console.error('Error fetching leads:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const updateLeadStatus = async (leadId: string, newStatus: string) => {
@@ -66,8 +127,72 @@ export default function InteresadosPage() {
         
         if (!error) {
             setLeads(prev => prev.map(l => l.id === leadId ? { ...l, estado: newStatus } : l));
+            fetchSummaryStats(); // Update totals
         }
         setUpdatingStatus(null);
+    };
+
+    const handleBulkStatusUpdate = async (newStatus: string) => {
+        if (selectedIds.length === 0) return;
+        setLoading(true);
+        const { error } = await supabase
+            .from('interesados')
+            .update({ estado: newStatus })
+            .in('id', selectedIds);
+        
+        if (!error) {
+            fetchLeads();
+            fetchSummaryStats();
+            setSelectedIds([]);
+        }
+        setLoading(false);
+    };
+
+    const handleExportCSV = async () => {
+        setIsExporting(true);
+        try {
+            // Fetch ALL filtered leads for export
+            let query = supabase.from('interesados').select('nombre_completo, email, telefono, origen, estado, created_at, urgencia, propiedad_interes');
+            if (statusFilter) query = query.eq('estado', statusFilter);
+            if (originFilter) query = query.eq('origen', originFilter);
+            if (dateFilter !== 'todos') {
+                const startDate = new Date();
+                if (dateFilter === 'hoy') startDate.setHours(0, 0, 0, 0);
+                else if (dateFilter === 'semana') startDate.setDate(new Date().getDate() - 7);
+                else if (dateFilter === 'mes') startDate.setMonth(new Date().getMonth() - 1);
+                query = query.gte('created_at', startDate.toISOString());
+            }
+            
+            const { data, error } = await query;
+            if (error) throw error;
+
+            const headers = ['Nombre;Email;Telefono;Origen;Estado;Fecha;Urgencia;Propiedad'];
+            const csvRows = data.map(l => [
+                l.nombre_completo, l.email, l.telefono, l.origen, l.estado, 
+                new Date(l.created_at).toLocaleDateString(), l.urgencia, l.propiedad_interes
+            ].map(v => v ? `"${v.toString().replace(/"/g, '""')}"` : '""').join(';'));
+
+            const csvContent = "\uFEFF" + headers.concat(csvRows).join('\n'); // Add BOM for Excel
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `leads_alros_${new Date().toISOString().split('T')[0]}.csv`);
+            link.click();
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === leads.length) setSelectedIds([]);
+        else setSelectedIds(leads.map(l => l.id));
+    };
+
+    const toggleSelectOne = (id: string) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
 
     const handleSort = (key: string) => {
@@ -79,63 +204,57 @@ export default function InteresadosPage() {
         });
     };
 
-    // Count by status
-    const statusCounts = leads.reduce((acc: Record<string, number>, lead) => {
-        const estado = lead.estado || 'Nuevo';
-        acc[estado] = (acc[estado] || 0) + 1;
-        return acc;
-    }, {});
-
-    const filteredLeads = leads
-        .filter(lead => {
-            const matchesSearch =
-                (lead.nombre_completo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (lead.emails?.some((e: string) => e.toLowerCase().includes(searchTerm.toLowerCase()))) ||
-                (lead.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (lead.telefonos?.some((t: string) => t.includes(searchTerm))) ||
-                (lead.telefono || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (lead.propiedad_interes || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (lead.codigo || '').toLowerCase().includes(searchTerm.toLowerCase());
-
-            const matchesStatus = statusFilter === '' || lead.estado === statusFilter;
-            const matchesOrigin = originFilter === '' || lead.origen === originFilter;
-
-            return matchesSearch && matchesStatus && matchesOrigin;
-        })
-        .sort((a, b) => {
-            const aVal = a[sortConfig.key] || '';
-            const bVal = b[sortConfig.key] || '';
-            if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-            if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-            return 0;
-        });
-
     const newLeadsCount = statusCounts['Nuevo'] || 0;
 
     const SortIcon = ({ column }: { column: string }) => {
-        if (sortConfig.key !== column) return <span className="text-slate-300 ml-1 font-normal">↕</span>;
-        return <span className="text-emerald-600 ml-1 font-bold">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>;
+        if (sortConfig.key !== column) return <span className="text-slate-300 ml-1 font-normal opacity-30">↕</span>;
+        return <span className="text-blue-600 ml-1 font-bold">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>;
     };
+
+    const stats = [
+        { label: 'Totales', value: totalCount, icon: <UserPlus className="text-blue-600" />, bg: 'bg-blue-50' },
+        { label: 'Nuevos', value: statusCounts['Nuevo'] || 0, icon: <Clock className="text-red-500" />, bg: 'bg-red-50' },
+        { label: 'En seguimiento', value: statusCounts['En seguimiento'] || 0, icon: <ArrowUpDown className="text-amber-500" />, bg: 'bg-amber-50' },
+        { label: 'Cerrados', value: statusCounts['Cerrado'] || 0, icon: <CheckCircle2 className="text-emerald-500" />, bg: 'bg-emerald-50' },
+    ];
 
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Base de Interesados</h1>
-                    <p className="text-slate-500">
-                        {leads.length} contactos en total
-                        {newLeadsCount > 0 && (
-                            <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold border border-red-200 animate-pulse">
-                                <Clock size={12} /> {newLeadsCount} sin atender
-                            </span>
-                        )}
-                    </p>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Leads & Demandas</h1>
+                    <p className="text-slate-500 text-sm font-medium">Gestión integral de interesados y prospectos</p>
                 </div>
-                <Link href="/admin/interesados/nuevo" className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
-                    <span className="font-bold text-lg leading-none">+</span>
-                    <span>Nuevo Interesado</span>
-                </Link>
+                <div className="flex gap-3 w-full md:w-auto">
+                    <button 
+                        onClick={handleExportCSV}
+                        disabled={isExporting}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-xl font-bold transition-all shadow-sm disabled:opacity-50"
+                    >
+                        {isExporting ? <Clock size={18} className="animate-spin" /> : <Download size={18} />}
+                        <span>Exportar</span>
+                    </button>
+                    <Link href="/admin/interesados/nuevo" className="flex-1 md:flex-none bg-[#831832] hover:bg-slate-900 text-white px-6 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#831832]/20">
+                        <UserPlus size={18} />
+                        <span>Nuevo Lead</span>
+                    </Link>
+                </div>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {stats.map((stat, i) => (
+                    <div key={i} className={`p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 bg-white`}>
+                        <div className={`h-12 w-12 rounded-xl ${stat.bg} flex items-center justify-center`}>
+                            {stat.icon}
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                            <p className="text-2xl font-black text-slate-900 leading-none mt-1">{stat.value}</p>
+                        </div>
+                    </div>
+                ))}
             </div>
 
             {/* Status Tabs - Improved responsiveness */}
@@ -169,37 +288,106 @@ export default function InteresadosPage() {
                 <div className="absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-slate-50 to-transparent pointer-events-none md:hidden" />
             </div>
 
-            {/* Search & Origin Filter */}
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+            {/* Bulk Action Bar */}
+            {selectedIds.length > 0 && (
+                <div className="sticky top-20 z-[45] bg-slate-900 text-white p-3 rounded-2xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
+                    <div className="flex items-center gap-3 ml-2">
+                        <div className="bg-white/20 h-8 w-8 rounded-lg flex items-center justify-center text-white">
+                            <CheckSquare size={16} />
+                        </div>
+                        <span className="font-bold">{selectedIds.length} seleccionados</span>
+                    </div>
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                        <div className="flex gap-1 flex-1 md:flex-initial">
+                            <button 
+                                onClick={() => handleBulkStatusUpdate('Contactado')}
+                                className="flex-1 md:flex-none px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-all border border-white/10"
+                            >
+                                Contactado
+                            </button>
+                            <button 
+                                onClick={() => handleBulkStatusUpdate('En seguimiento')}
+                                className="flex-1 md:flex-none px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-all border border-white/10"
+                            >
+                                Seguimiento
+                            </button>
+                            <button 
+                                onClick={() => handleBulkStatusUpdate('Baja')}
+                                className="flex-1 md:flex-none px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs font-bold transition-all"
+                            >
+                                Dar de Baja
+                            </button>
+                        </div>
+                        <button 
+                            onClick={() => setSelectedIds([])}
+                            className="p-1.5 hover:bg-white/10 rounded-lg text-white/60"
+                        >
+                            <XCircle size={18} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Search & Filters */}
+            <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:flex-row gap-3">
+                <div className="flex-1 relative group">
+                    <Search className="absolute left-4 top-3 h-4 w-4 text-slate-400 group-focus-within:text-[#831832] transition-colors" />
                     <input
                         type="text"
-                        placeholder="Buscar por nombre, email, teléfono o referencia..."
+                        placeholder="Buscar por nombre, email, teléfono o código..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#831832]/10 focus:border-[#831832] transition-all"
                     />
                 </div>
-                <select
-                    value={originFilter}
-                    onChange={(e) => setOriginFilter(e.target.value)}
-                    className="px-4 py-2 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[180px]"
-                >
-                    <option value="">Todos los Orígenes</option>
-                    <option value="chatbot">🤖 Chatbot IA</option>
-                    <option value="web_propiedad">🏠 Ficha de Propiedad</option>
-                    <option value="web_tasacion">📊 Tasación</option>
-                    <option value="web_contacto">📧 Contacto Web</option>
-                    <option value="manual">✏️ Manual</option>
-                </select>
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:flex gap-2">
+                    <div className="relative">
+                        <Filter size={14} className="absolute left-3 top-3.5 text-slate-400" />
+                        <select
+                            value={originFilter}
+                            onChange={(e) => {
+                                setOriginFilter(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#831832]/10 appearance-none font-bold text-slate-700 text-sm cursor-pointer"
+                        >
+                            <option value="">Todos los Orígenes</option>
+                            <option value="chatbot">Chatbot IA</option>
+                            <option value="web_propiedad">Propiedad</option>
+                            <option value="web_tasacion">Tasación</option>
+                            <option value="web_contacto">Contacto Web</option>
+                            <option value="manual">Manual</option>
+                        </select>
+                        <ChevronDown size={14} className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" />
+                    </div>
+                    <div className="relative">
+                        <Calendar size={14} className="absolute left-3 top-3.5 text-slate-400" />
+                        <select
+                            value={dateFilter}
+                            onChange={(e) => {
+                                setDateFilter(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#831832]/10 appearance-none font-bold text-slate-700 text-sm cursor-pointer"
+                        >
+                            <option value="todos">Toda la historia</option>
+                            <option value="hoy">Hoy</option>
+                            <option value="semana">Últimos 7 días</option>
+                            <option value="mes">Último mes</option>
+                        </select>
+                        <ChevronDown size={14} className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" />
+                    </div>
+                </div>
             </div>
 
             {/* Table */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 {loading ? (
                     <div className="p-12 flex justify-center text-slate-400"><UserPlus size={40} className="animate-pulse opacity-30" /></div>
-                ) : filteredLeads.length === 0 ? (
+                ) : leads.length === 0 ? (
                     <div className="px-6 py-12 text-center text-slate-400">
                         <UserPlus size={40} className="mx-auto mb-3 opacity-30" />
                         <p className="font-medium">No hay interesados que coincidan.</p>
@@ -209,7 +397,7 @@ export default function InteresadosPage() {
                     <>
                     {/* ═══ MOBILE: Card View ═══ */}
                     <div className="md:hidden divide-y divide-slate-100">
-                        {filteredLeads.map((lead) => {
+                        {leads.map((lead) => {
                             const origin = ORIGIN_CONFIG[lead.origen] || ORIGIN_CONFIG.manual;
                             const status = STATUS_CONFIG[lead.estado] || STATUS_CONFIG.Nuevo;
                             const urgencyColors: Record<string, string> = {
@@ -286,23 +474,29 @@ export default function InteresadosPage() {
                         <table className="w-full text-left">
                             <thead className="bg-slate-50 border-b border-slate-200">
                                 <tr>
-                                    <th className="px-5 py-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('nombre_completo')}>
+                                    <th className="px-5 py-4 w-10">
+                                        <button onClick={toggleSelectAll} className="text-slate-400 hover:text-[#831832]">
+                                            {selectedIds.length === leads.length && leads.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
+                                        </button>
+                                    </th>
+                                    <th className="px-5 py-4 font-bold text-slate-800 tracking-tight text-xs uppercase cursor-pointer hover:bg-slate-100" onClick={() => handleSort('nombre_completo')}>
                                         Nombre <SortIcon column="nombre_completo" />
                                     </th>
-                                    <th className="px-5 py-4 font-semibold text-slate-700">Origen</th>
-                                    <th className="px-5 py-4 font-semibold text-slate-700">Contacto</th>
-                                    <th className="px-5 py-4 font-semibold text-slate-700">Info</th>
-                                    <th className="px-5 py-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('estado')}>
+                                    <th className="px-5 py-4 font-bold text-slate-800 tracking-tight text-xs uppercase cursor-pointer hover:bg-slate-100" onClick={() => handleSort('origen')}>
+                                        Origen <SortIcon column="origen" />
+                                    </th>
+                                    <th className="px-5 py-4 font-bold text-slate-800 tracking-tight text-xs uppercase">Contacto</th>
+                                    <th className="px-5 py-4 font-bold text-slate-800 tracking-tight text-xs uppercase cursor-pointer hover:bg-slate-100" onClick={() => handleSort('estado')}>
                                         Estado <SortIcon column="estado" />
                                     </th>
-                                    <th className="px-5 py-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('created_at')}>
+                                    <th className="px-5 py-4 font-bold text-slate-800 tracking-tight text-xs uppercase cursor-pointer hover:bg-slate-100" onClick={() => handleSort('created_at')}>
                                         Fecha <SortIcon column="created_at" />
                                     </th>
-                                    <th className="px-5 py-4 font-semibold text-slate-700 text-right">Acciones</th>
+                                    <th className="px-5 py-4 font-bold text-slate-800 tracking-tight text-xs uppercase text-right">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {filteredLeads.map((lead) => {
+                                {leads.map((lead) => {
                                     const origin = ORIGIN_CONFIG[lead.origen] || ORIGIN_CONFIG.manual;
                                     const status = STATUS_CONFIG[lead.estado] || STATUS_CONFIG.Nuevo;
                                     const urgencyColors: Record<string, string> = {
@@ -312,89 +506,72 @@ export default function InteresadosPage() {
                                     };
 
                                     return (
-                                        <tr key={lead.id} className={`hover:bg-slate-50 transition-colors ${lead.estado === 'Baja' ? 'opacity-50' : ''} ${lead.estado === 'Nuevo' ? 'bg-red-50/30' : ''}`}>
+                                        <tr key={lead.id} className={`hover:bg-slate-50 transition-colors ${lead.estado === 'Baja' ? 'opacity-50' : ''} ${lead.estado === 'Nuevo' ? 'bg-red-50/20' : ''}`}>
+                                            <td className="px-5 py-4">
+                                                <button onClick={() => toggleSelectOne(lead.id)} className={`${selectedIds.includes(lead.id) ? 'text-[#831832]' : 'text-slate-300'} hover:text-[#831832]`}>
+                                                    {selectedIds.includes(lead.id) ? <CheckSquare size={18} /> : <Square size={18} />}
+                                                </button>
+                                            </td>
                                             <td className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${origin.bg} ${origin.color} border ${origin.border}`}>
+                                                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${origin.bg} ${origin.color} border ${origin.border}`}>
                                                         {origin.icon}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <span className="font-semibold text-slate-900 block truncate">{lead.nombre_completo}</span>
-                                                        <span className="text-xs text-slate-400 font-mono">{lead.codigo}</span>
+                                                        <span className="font-bold text-slate-900 block truncate leading-tight">{lead.nombre_completo}</span>
+                                                        <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{lead.codigo || 'S/N'}</span>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4">
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${origin.bg} ${origin.color} ${origin.border}`}>
-                                                    {origin.icon}
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase border ${origin.bg} ${origin.color} ${origin.border}`}>
                                                     {origin.label}
                                                 </span>
                                             </td>
                                             <td className="px-5 py-4">
-                                                <div className="flex flex-col gap-1 text-sm text-slate-500">
-                                                    {lead.emails && lead.emails.length > 0 ? (
-                                                        <div className="flex items-center gap-1"><Mail size={13} /> <span className="truncate max-w-[150px]">{lead.emails[0]}</span></div>
-                                                    ) : lead.email && (
-                                                        <div className="flex items-center gap-1"><Mail size={13} /> <span className="truncate max-w-[150px]">{lead.email}</span></div>
+                                                <div className="flex flex-col gap-0.5 text-xs text-slate-500 font-medium">
+                                                    {(lead.email || lead.emails?.[0]) && (
+                                                        <div className="flex items-center gap-1.5 leading-none mb-1"><Mail size={12} className="text-slate-300" /> <span className="truncate max-w-[140px]">{lead.emails?.[0] || lead.email}</span></div>
                                                     )}
-                                                    {lead.telefonos && lead.telefonos.length > 0 ? (
-                                                        <div className="flex items-center gap-1"><Phone size={13} /> {lead.telefonos[0]}</div>
-                                                    ) : lead.telefono && (
-                                                        <div className="flex items-center gap-1"><Phone size={13} /> {lead.telefono}</div>
+                                                    {(lead.telefono || lead.telefonos?.[0]) && (
+                                                        <div className="flex items-center gap-1.5 leading-none"><Phone size={12} className="text-slate-300" /> {lead.telefonos?.[0] || lead.telefono}</div>
                                                     )}
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4">
-                                                <div className="flex flex-col gap-1">
-                                                    {lead.propiedad_interes && (
-                                                        <span className="inline-flex items-center gap-1 text-xs font-mono text-purple-600 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded w-fit">
-                                                            <Home size={11} /> {lead.propiedad_interes}
-                                                        </span>
-                                                    )}
-                                                    {lead.urgencia && (
-                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border w-fit ${urgencyColors[lead.urgencia] || ''}`}>
-                                                            {lead.urgencia === 'Alta' ? '🔥' : lead.urgencia === 'Media' ? '⚡' : '💤'} {lead.urgencia}
-                                                        </span>
-                                                    )}
-                                                    {lead.tipo_operacion && lead.tipo_operacion !== 'consulta' && (
-                                                        <span className="text-[10px] text-slate-500">{lead.tipo_operacion === 'alquiler' ? 'Busca Alquilar' : lead.tipo_operacion === 'venta' ? 'Busca Comprar' : lead.tipo_operacion === 'valoracion' ? 'Quiere Vender' : lead.tipo_operacion}</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div className="relative group">
+                                                <div className="relative">
                                                     <select
                                                         value={lead.estado || 'Nuevo'}
                                                         onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
                                                         disabled={updatingStatus === lead.id}
-                                                        className={`appearance-none cursor-pointer px-3 py-1.5 pr-7 rounded-lg text-xs font-bold border transition-all focus:outline-none focus:ring-2 focus:ring-blue-300 ${status.bg} ${status.color} ${status.border} ${updatingStatus === lead.id ? 'opacity-50' : ''}`}
+                                                        className={`appearance-none cursor-pointer px-3 py-1.5 pr-7 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all focus:outline-none focus:ring-4 focus:ring-slate-100 ${status.bg} ${status.color} ${status.border} ${updatingStatus === lead.id ? 'opacity-50' : ''}`}
                                                     >
-                                                        <option value="Nuevo">🔴 Nuevo</option>
-                                                        <option value="Contactado">🔵 Contactado</option>
-                                                        <option value="En seguimiento">🟡 Seguimiento</option>
-                                                        <option value="Cerrado">🟢 Cerrado</option>
-                                                        <option value="Baja">⚪ Baja</option>
+                                                        <option value="Nuevo">Nuevo</option>
+                                                        <option value="Contactado">Contactado</option>
+                                                        <option value="En seguimiento">Seguimiento</option>
+                                                        <option value="Cerrado">Cerrado</option>
+                                                        <option value="Baja">Baja</option>
                                                     </select>
-                                                    <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+                                                    <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-4 text-sm text-slate-500">
+                                            <td className="px-5 py-4">
                                                 <div className="flex flex-col">
-                                                    <span className="font-medium">
-                                                        {new Date(lead.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}
+                                                    <span className="text-xs font-bold text-slate-900 leading-none">
+                                                        {new Date(lead.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}
                                                     </span>
-                                                    <span className="text-[10px] text-slate-400">
+                                                    <span className="text-[10px] text-slate-400 mt-0.5 uppercase font-medium">
                                                         {new Date(lead.created_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                                                     </span>
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <Link href={`/admin/interesados/${lead.id}`} className="whitespace-nowrap px-3 py-1.5 flex items-center gap-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 rounded-lg text-slate-600 text-sm font-medium transition-colors" title="Ver Ficha Completa">
-                                                        <Eye size={16} /> Ver
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Link href={`/admin/interesados/${lead.id}`} className="p-2 text-slate-400 hover:text-[#831832] hover:bg-slate-100 rounded-lg transition-all" title="Ver Detalle">
+                                                        <Eye size={18} />
                                                     </Link>
-                                                    <Link href={`/admin/interesados/editar/${lead.id}`} className="p-1.5 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 hover:border-emerald-200 rounded-lg text-emerald-600 transition-colors" title="Modificar Datos">
-                                                        <Edit size={16} />
+                                                    <Link href={`/admin/interesados/editar/${lead.id}`} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-all" title="Editar">
+                                                        <Edit size={18} />
                                                     </Link>
                                                 </div>
                                             </td>
@@ -407,6 +584,49 @@ export default function InteresadosPage() {
                     </>
                 )}
             </div>
+
+            {/* Pagination */}
+            {totalCount > pageSize && (
+                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">
+                        Mostrando <span className="text-slate-900">{((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)}</span> de <span className="text-slate-900">{totalCount}</span>
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-30 transition-all shadow-sm"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                        <div className="flex gap-1">
+                            {Array.from({ length: Math.min(5, Math.ceil(totalCount / pageSize)) }).map((_, i) => {
+                                const pageNum = i + 1;
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`w-10 h-10 rounded-xl font-bold transition-all ${
+                                            currentPage === pageNum
+                                                ? 'bg-[#831832] text-white shadow-lg shadow-[#831832]/20'
+                                                : 'bg-white text-slate-600 border border-slate-200 hover:border-[#831832]/30'
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalCount / pageSize), prev + 1))}
+                            disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+                            className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-30 transition-all shadow-sm"
+                        >
+                            <ChevronRight size={20} />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
