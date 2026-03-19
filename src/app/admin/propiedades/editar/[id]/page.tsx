@@ -408,6 +408,39 @@ export default function EditPropertyPage() {
         }
     };
 
+    const resizeImage = (file: File, maxWidth: number = 1920): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxWidth) {
+                        height = (maxWidth * height) / width;
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    
+                    canvas.toBlob((blob) => {
+                        if (blob) resolve(blob);
+                        else reject(new Error('Canvas blob failure'));
+                    }, 'image/jpeg', 0.85); // High quality JPEG for upload
+                };
+                img.onerror = (err) => reject(err);
+            };
+            reader.onerror = (err) => reject(err);
+        });
+    };
+
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFiles = Array.from(event.target.files || []);
         if (selectedFiles.length === 0) return;
@@ -419,71 +452,100 @@ export default function EditPropertyPage() {
 
         setIsUploading(true);
         const refId = formData.reference_id;
-        let successfulImages: string[] = [...formData.images];
         let errorCount = 0;
         let successCount = 0;
 
         const toast = document.createElement("div");
-        toast.className = "fixed bottom-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-xl shadow-xl z-50 transition-all font-medium text-sm flex flex-col gap-2 min-w-[300px]";
+        toast.className = "fixed bottom-4 right-4 bg-blue-600 text-white px-6 py-4 rounded-2xl shadow-2xl z-[9999] transition-all font-medium text-sm flex flex-col gap-3 min-w-[320px] border border-blue-400";
         document.body.appendChild(toast);
 
         try {
             for (let i = 0; i < selectedFiles.length; i++) {
                 const file = selectedFiles[i];
                 
-                // Update progress in toast
+                // Update UI: Compressing...
                 toast.innerHTML = `
-                    <div className="flex items-center gap-3">
-                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 
-                        <span>Subiendo foto ${i + 1} de ${selectedFiles.length}...</span>
+                    <div class="flex items-center gap-3">
+                        <div class="animate-spin h-5 w-5 border-2 border-white/30 border-t-white rounded-full"></div>
+                        <div class="flex flex-col">
+                            <span class="font-bold">Procesando foto ${i + 1} de ${selectedFiles.length}</span>
+                            <span class="text-[11px] opacity-80">Optimizando tamaño localmente...</span>
+                        </div>
                     </div>
-                    <div class="w-full bg-blue-400/30 rounded-full h-1.5 mt-1 overflow-hidden">
-                        <div class="bg-white h-full transition-all duration-300" style="width: ${(i / selectedFiles.length) * 100}%"></div>
+                    <div class="w-full bg-white/20 rounded-full h-2 overflow-hidden">
+                        <div class="bg-white h-full transition-all duration-500" style="width: ${(i / selectedFiles.length) * 100}%"></div>
                     </div>
                 `;
 
-                const data = new FormData();
-                data.append('reference_id', refId);
-                data.append('files', file); // Use same name 'files' for back-compatibility with current API
-
                 try {
+                    // 1. LOCAL RESIZE (Crucial for Vercel 4.5MB limit)
+                    const optimizedBlob = file.size > 800 * 1024 
+                        ? await resizeImage(file) 
+                        : file; // Only resize if > 800KB
+
+                    // 2. UPLOAD
+                    toast.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="animate-spin h-5 w-5 border-2 border-white/30 border-t-white rounded-full"></div>
+                            <div class="flex flex-col">
+                                <span class="font-bold">Subiendo foto ${i + 1} de ${selectedFiles.length}</span>
+                                <span class="text-[11px] opacity-80">${file.name}</span>
+                            </div>
+                        </div>
+                        <div class="w-full bg-white/20 rounded-full h-2 overflow-hidden">
+                            <div class="bg-white h-full transition-all duration-300" style="width: ${(i / selectedFiles.length) * 100}%"></div>
+                        </div>
+                    `;
+
+                    const data = new FormData();
+                    data.append('reference_id', refId);
+                    data.append('files', optimizedBlob, file.name.replace(/\.[^/.]+$/, "") + ".jpg");
+
                     const response = await fetch('/api/upload-images', {
                         method: 'POST',
                         body: data
                     });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
+                        throw new Error(errorData.error || `HTTP ${response.status}`);
+                    }
+
                     const result = await response.json();
 
                     if (result.success && result.images) {
-                        // After each successful upload, we get the updated list from the scan
-                        successfulImages = result.images;
                         successCount++;
-                        
-                        // Set current images so user sees progress in gallery
+                        // Immediate UI update for the gallery
                         setFormData(prev => ({
                             ...prev,
                             images: result.images as string[],
                             imageUrl: (result.images as string[])[0]
                         }));
                     } else {
-                        console.error(`Error uploading ${file.name}:`, result.error);
-                        errorCount++;
+                        throw new Error(result.error || "Error en el servidor");
                     }
-                } catch (err) {
-                    console.error(`Network error on ${file.name}:`, err);
+                } catch (err: any) {
+                    console.error(`Error on ${file.name}:`, err);
                     errorCount++;
+                    // Show small error hint in toast
+                    const errHint = document.createElement("div");
+                    errHint.className = "text-[10px] text-red-200 mt-1";
+                    errHint.innerText = `Fallo en: ${file.name} - ${err.message}`;
+                    toast.appendChild(errHint);
+                    await new Promise(r => setTimeout(r, 1000)); // Pause briefly to let user read error
                 }
             }
 
-            const msg = `Proceso finalizado.\n✅ ${successCount} fotos subidas y optimizadas correctamente.${errorCount > 0 ? `\n❌ ${errorCount} fotos fallaron.` : ''}`;
-            alert(msg);
+            const finalMsg = `Proceso de subida finalizado.\n✅ ${successCount} fotos procesadas con éxito.${errorCount > 0 ? `\n❌ ${errorCount} fotos fallaron.` : ''}`;
+            alert(finalMsg);
 
         } catch (e) {
             console.error(e);
-            alert("Error general durante la subida.");
+            alert("Ocurrió un error crítico durante la subida masiva.");
         } finally {
-            document.body.removeChild(toast);
+            if (document.body.contains(toast)) document.body.removeChild(toast);
             setIsUploading(false);
-            if (event.target) event.target.value = ''; // clear input
+            if (event.target) event.target.value = ''; // Clear input for next use
         }
     };
 
