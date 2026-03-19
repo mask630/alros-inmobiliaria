@@ -15,14 +15,18 @@ export function Chatbot() {
     const [isOpen, setIsOpen] = useState(false);
     const [isThinking, setIsThinking] = useState(false);
     const [showLeadForm, setShowLeadForm] = useState(false);
-    const [messages, setMessages] = useState([
-        { 
-            role: 'agent', 
-            text: isEn 
+    const [messages, setMessages] = useState<any[]>([]);
+    const [initialGreetingSet, setInitialGreetingSet] = useState(false);
+
+    useEffect(() => {
+        if (!initialGreetingSet && pathname) {
+            const greeting = isEn 
                 ? 'Hello! 👋 I am the Alros AI assistant. How can I help you today?\n\nI can provide information about our properties, sales processes, and general inquiries.'
-                : '¡Hola! 👋 Soy el asistente IA de Alros. ¿En qué puedo ayudarte hoy?\n\nPuedo informarte sobre nuestras propiedades, procesos de venta o dudas generales.' 
+                : '¡Hola! 👋 Soy el asistente IA de Alros. ¿En qué puedo ayudarte hoy?\n\nPuedo informarte sobre nuestras propiedades, procesos de venta o dudas generales.';
+            setMessages([{ role: 'agent', text: greeting }]);
+            setInitialGreetingSet(true);
         }
-    ]);
+    }, [pathname, isEn, initialGreetingSet]);
     const [input, setInput] = useState('');
     const [leadData, setLeadData] = useState({ nombre: '', email: '', telefono: '', mensaje: '' });
     const [leadStatus, setLeadStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
