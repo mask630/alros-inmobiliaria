@@ -75,6 +75,8 @@ interface Property {
     city: string;
     price: number;
     operation_type: string;
+    latitude?: number;
+    longitude?: number;
     lat?: number;
     lng?: number;
     image?: string;
@@ -137,8 +139,8 @@ export default function MapClient({ centerLat, centerLng, approximateAddress, ot
             </Marker>
 
             {otherProperties.map((prop) => {
-                const lat = prop.lat || prop.features?.latitude;
-                const lng = prop.lng || prop.features?.longitude;
+                const lat = prop.latitude || prop.lat || prop.features?.latitude;
+                const lng = prop.longitude || prop.lng || prop.features?.longitude;
                 if (!lat || !lng) return null;
 
                 const iconColor = prop.operation_type === 'venta' ? '#10b981' : '#f97316';

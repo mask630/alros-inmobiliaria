@@ -427,7 +427,7 @@ export default function HomePage() {
                     centerLat={36.5946}
                     centerLng={-4.5516}
                     approximateAddress="Costa del Sol"
-                    otherProperties={allProperties.filter(p => p.features?.latitude && p.features?.longitude && (mapFilter === 'todos' || p.operation_type === mapFilter))}
+                    otherProperties={allProperties.filter(p => (p.latitude || p.features?.latitude) && (p.longitude || p.features?.longitude) && (mapFilter === 'todos' || p.operation_type === mapFilter))}
                     hideCenterMarker={true}
                   />
                 )}
