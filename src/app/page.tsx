@@ -241,6 +241,7 @@ export default function HomePage() {
                     price={Number(prop.price).toLocaleString('de-DE') + (prop.operation_type === 'alquiler' ? ' €/mes' : ' €')}
                     location={prop.city}
                     specs={{ beds, baths, area }}
+                    referencia={prop.referencia}
                     badge={prop.features?.badge || (prop.operation_type === 'venta' ? 'Venta' : 'Alquiler')}
                     isPremium={prop.features?.badge === 'Lujo' || prop.features?.badge === 'Exclusivo'}
                   />
@@ -543,7 +544,7 @@ export default function HomePage() {
 
 // --- SUB-COMPONENTS ---
 
-function PropertyCard({ id, image, title, price, location, specs, badge, delay, isPremium }: any) {
+function PropertyCard({ id, image, title, price, location, specs, badge, delay, isPremium, referencia }: any) {
   return (
     <Link href={`/propiedades/${id}`} className="block h-full">
       <motion.div
@@ -570,6 +571,14 @@ function PropertyCard({ id, image, title, price, location, specs, badge, delay, 
               {badge}
             </span>
           </div>
+
+          {referencia && (
+            <div className="absolute top-5 right-5 z-20">
+              <span className="text-[9px] font-black px-3 py-1 rounded-lg uppercase tracking-widest bg-white/95 text-slate-800 shadow-md border border-white/50 backdrop-blur-sm">
+                {referencia}
+              </span>
+            </div>
+          )}
 
           {/* Price Overlay */}
           <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent">

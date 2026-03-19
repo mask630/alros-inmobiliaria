@@ -193,8 +193,9 @@ export default async function PropertiesPage({ searchParams }: Props) {
                                     key={property.id}
                                     id={property.id}
                                     index={idx}
-                                    image={property.image || property.features?.image || "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"}
+                                    image={(property.images && property.images[0]) || property.image || property.features?.image || "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"}
                                     title={property.title}
+                                    referencia={property.referencia}
                                     price={Number(property.price).toLocaleString('de-DE') + (property.operation_type === 'alquiler' ? ' €/mes' : ' €')}
                                     location={property.city}
                                     specs={{
@@ -216,7 +217,7 @@ export default async function PropertiesPage({ searchParams }: Props) {
     );
 }
 
-function PropertyCard({ id, index, image, title, price, location, specs, tag, propertyType, status }: any) {
+function PropertyCard({ id, index, image, title, price, location, specs, tag, propertyType, status, referencia }: any) {
     const formatPropertyType = (type: string | undefined) => {
         if (!type) return null;
         const typeLabels: Record<string, string> = {
@@ -268,6 +269,14 @@ function PropertyCard({ id, index, image, title, price, location, specs, tag, pr
                             {tag}
                         </span>
                     </div>
+
+                    {referencia && (
+                        <div className="absolute top-4 right-4 z-20">
+                            <span className="text-[9px] font-black px-3 py-1 rounded-lg uppercase tracking-widest bg-white/90 text-slate-800 shadow-md border border-white">
+                                {referencia}
+                            </span>
+                        </div>
+                    )}
 
                     {/* Price Tag Overlay */}
                     <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-slate-900/80 to-transparent">

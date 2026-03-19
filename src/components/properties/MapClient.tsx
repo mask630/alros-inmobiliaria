@@ -75,6 +75,13 @@ interface Property {
     city: string;
     price: number;
     operation_type: string;
+    lat?: number;
+    lng?: number;
+    image?: string;
+    images?: string[];
+    bedrooms?: number;
+    bathrooms?: number;
+    size_m2?: number;
     features?: {
         bedrooms?: number;
         bathrooms?: number;
@@ -129,10 +136,9 @@ export default function MapClient({ centerLat, centerLng, approximateAddress, ot
                 </Popup>
             </Marker>
 
-            {/* Other properties */}
             {otherProperties.map((prop) => {
-                const lat = prop.features?.latitude;
-                const lng = prop.features?.longitude;
+                const lat = prop.lat || prop.features?.latitude;
+                const lng = prop.lng || prop.features?.longitude;
                 if (!lat || !lng) return null;
 
                 const iconColor = prop.operation_type === 'venta' ? '#10b981' : '#f97316';
@@ -143,7 +149,7 @@ export default function MapClient({ centerLat, centerLng, approximateAddress, ot
                         <Popup className="property-popup">
                             <div className="w-48 overflow-hidden rounded">
                                 <img
-                                    src={prop.features?.image || "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200"}
+                                    src={prop.image || (prop.images && prop.images[0]) || prop.features?.image || "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200"}
                                     alt={locale === 'en' ? (prop.title_en || prop.title) : prop.title}
                                     className="w-full h-24 object-cover"
                                 />
@@ -152,9 +158,9 @@ export default function MapClient({ centerLat, centerLng, approximateAddress, ot
                                     <p className="text-[13px] font-black text-black mb-0.5">{formatAbbreviatedPrice(prop.price)}€</p>
 
                                     <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mb-1.5 font-medium tracking-tight">
-                                        {prop.features?.bedrooms ? <span>{prop.features.bedrooms} {locale === 'en' ? 'beds' : 'hab'}</span> : null}
-                                        {prop.features?.bathrooms ? <span>• {prop.features.bathrooms} {locale === 'en' ? 'baths' : 'ba'}</span> : null}
-                                        {prop.features?.size_m2 ? <span>• {prop.features.size_m2} m²</span> : null}
+                                        {(prop.bedrooms || prop.features?.bedrooms) ? <span>{prop.bedrooms || prop.features?.bedrooms} {locale === 'en' ? 'beds' : 'hab'}</span> : null}
+                                        {(prop.bathrooms || prop.features?.bathrooms) ? <span>• {prop.bathrooms || prop.features?.bathrooms} {locale === 'en' ? 'baths' : 'ba'}</span> : null}
+                                        {(prop.size_m2 || prop.features?.size_m2) ? <span>• {prop.size_m2 || prop.features?.size_m2} m²</span> : null}
                                     </div>
 
                                     <div className="px-1 pb-0.5">

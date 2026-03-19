@@ -192,8 +192,9 @@ export default async function PropertiesPage({ searchParams }: Props) {
                                 <PropertyCard
                                     key={property.id}
                                     id={property.id}
-                                    image={property.image || property.features?.image || "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"}
+                                    image={(property.images && property.images[0]) || property.image || property.features?.image || "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"}
                                     title={property.title_en || property.title}
+                                    referencia={property.referencia}
                                     price={Number(property.price).toLocaleString('de-DE') + (property.operation_type === 'alquiler' ? ' €/month' : ' €')}
                                     location={property.city}
                                     specs={{
@@ -215,20 +216,7 @@ export default async function PropertiesPage({ searchParams }: Props) {
     );
 }
 
-interface PropertyCardProps {
-    id: string;
-    image: string;
-    title: string;
-    price: string;
-    location: string;
-    specs: { beds: number; baths: number; area: number };
-    tag: string;
-    propertyType?: string;
-    status?: string;
-}
-
-function PropertyCard({ id, image, title, price, location, specs, tag, propertyType, status }: PropertyCardProps) {
-    // Format property type for display
+function PropertyCard({ id, index, image, title, price, location, specs, tag, propertyType, status, referencia }: any) {
     const formatPropertyType = (type: string | undefined) => {
         if (!type) return null;
         const typeLabels: Record<string, string> = {
@@ -242,57 +230,85 @@ function PropertyCard({ id, image, title, price, location, specs, tag, propertyT
             'pareado': 'Semi-detached',
             'chalet': 'Chalet',
             'casa_rural': 'Country House',
-            'piso': 'Apartment', // Map old 'piso' to 'Apartment'
+            'piso': 'Apartment',
             'casa': 'House'
         };
         return typeLabels[type] || type;
     };
 
     return (
-        <Link href={`/en/propiedades/${id}`} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-200">
-            <div className="relative h-56 overflow-hidden">
-                <img
-                    src={image}
-                    alt={title}
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                />
-                {status && status !== 'disponible' && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10 backdrop-blur-[1px]">
-                        <span className="text-white font-black text-2xl uppercase tracking-widest border-4 border-white px-4 py-2 rotate-[-15deg] shadow-xl">
-                            {status === 'vendido' ? 'SOLD' :
-                                status === 'reservado' ? 'RESERVED' :
-                                    status === 'alquilado' ? 'RENTED' : status}
+        <Link href={`/en/propiedades/${id}`} className="group block h-full">
+            <div className="bg-white rounded-[2rem] overflow-hidden shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.2)] transition-all duration-500 border border-slate-100 flex flex-col h-full transform hover:-translate-y-2 cursor-pointer relative">
+                
+                {/* Image Section */}
+                <div className="relative h-64 overflow-hidden">
+                    <img
+                        src={image}
+                        alt={title}
+                        className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000"
+                    />
+                    
+                    {/* Status Overlays */}
+                    {status && status !== 'disponible' && (
+                        <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center z-10 backdrop-blur-[2px]">
+                            <span className="text-white font-black text-xl uppercase tracking-[0.2em] border-2 border-white/50 px-6 py-2 rotate-[-10deg] shadow-2xl">
+                                {status === 'vendido' ? 'SOLD' :
+                                    status === 'reservado' ? 'RESERVED' :
+                                        status === 'alquilado' ? 'RENTED' : status}
+                            </span>
+                        </div>
+                    )}
+
+                    <div className="absolute top-4 left-4 flex gap-2 z-20">
+                        <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest backdrop-blur-md shadow-lg border ${
+                            tag === 'Rent' 
+                                ? 'bg-orange-500/90 text-white border-orange-400' 
+                                : 'bg-[#881337]/90 text-white border-red-400'
+                        }`}>
+                            {tag}
                         </span>
                     </div>
-                )}
-                <div className="absolute top-3 left-3 flex gap-2">
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${tag === 'Rent' ? 'bg-orange-500 text-white' : 'bg-emerald-600 text-white'
-                        }`}>
-                        {tag}
-                    </span>
-                    {propertyType && (
-                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/90 text-slate-700">
-                            {formatPropertyType(propertyType)}
-                        </span>
+
+                    {referencia && (
+                        <div className="absolute top-4 right-4 z-20">
+                            <span className="text-[9px] font-black px-3 py-1 rounded-lg uppercase tracking-widest bg-white/90 text-slate-800 shadow-md border border-white">
+                                {referencia}
+                            </span>
+                        </div>
                     )}
-                </div>
-            </div>
-            <div className="p-4">
-                <div className="mb-3">
-                    <h3 className="text-lg font-bold text-slate-900 line-clamp-1 group-hover:text-[#881337] transition-colors">{title}</h3>
-                    <div className="flex items-center text-slate-500 text-sm mt-1">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {location}
+
+                    {/* Price Tag Overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-slate-900/80 to-transparent">
+                        <p className="text-xl font-black text-white tracking-tighter drop-shadow-md">{price}</p>
                     </div>
                 </div>
 
-                <div className="flex justify-between items-end border-t border-slate-100 pt-3">
-                    <div className="flex gap-3 text-slate-600 text-sm">
-                        <div className="flex items-center gap-1"><Bed className="h-3 w-3" /> {specs.beds}</div>
-                        <div className="flex items-center gap-1"><Bath className="h-3 w-3" /> {specs.baths}</div>
-                        <div className="flex items-center gap-1"><Maximize className="h-3 w-3" /> {specs.area}m²</div>
+                {/* Content Section */}
+                <div className="p-6 flex flex-col flex-grow bg-white">
+                    <div className="mb-4 flex-grow">
+                         <div className="flex items-center text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1.5 gap-2">
+                            <MapPin className="h-3 w-3 text-[#881337]" />
+                            {location}
+                        </div>
+                        <h3 className="text-lg font-black text-slate-900 leading-tight group-hover:text-[#881337] transition-colors line-clamp-2">
+                            {title}
+                        </h3>
                     </div>
-                    <p className="text-lg font-bold text-[#881337]">{price}</p>
+
+                    <div className="grid grid-cols-3 gap-2 pt-5 border-t border-slate-50 mt-auto">
+                        <div className="flex flex-col items-center p-2 rounded-xl bg-slate-50/50">
+                            <Bed size={14} className="text-slate-400 mb-1" />
+                            <span className="text-xs font-black text-slate-800">{specs.beds}</span>
+                        </div>
+                        <div className="flex flex-col items-center p-2 rounded-xl bg-slate-50/50">
+                            <Bath size={14} className="text-slate-400 mb-1" />
+                            <span className="text-xs font-black text-slate-800">{specs.baths}</span>
+                        </div>
+                        <div className="flex flex-col items-center p-2 rounded-xl bg-slate-50/50">
+                            <Maximize size={14} className="text-slate-400 mb-1" />
+                            <span className="text-xs font-black text-slate-800">{specs.area}m²</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </Link>

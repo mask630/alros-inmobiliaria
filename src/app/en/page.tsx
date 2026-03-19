@@ -203,6 +203,7 @@ export default function HomePageEN() {
                     price={Number(prop.price).toLocaleString('de-DE') + (prop.operation_type === 'alquiler' ? ' €/month' : ' €')}
                     location={prop.city}
                     specs={{ beds, baths, area }}
+                    referencia={prop.referencia}
                     badge={prop.features?.badge || (prop.operation_type === 'venta' ? 'Sale' : 'Rent')}
                     isPremium={prop.features?.badge === 'Lujo' || prop.features?.badge === 'Exclusivo'}
                   />
@@ -506,47 +507,64 @@ export default function HomePageEN() {
 
 // --- SUB-COMPONENTS ---
 
-function PropertyCard({ id, image, title, price, location, specs, badge, delay, isPremium }: any) {
+function PropertyCard({ id, image, title, price, location, specs, badge, delay, isPremium, referencia }: any) {
   return (
-    <Link href={`/en/propiedades/${id}`} className="block">
+    <Link href={`/en/propiedades/${id}`} className="block h-full">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5, delay: delay }}
-        className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 border border-slate-100 flex flex-col h-full transform hover:-translate-y-2 cursor-pointer"
+        className="group bg-white rounded-[2rem] overflow-hidden shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.2)] transition-all duration-500 border border-slate-100 flex flex-col h-full transform hover:-translate-y-2 cursor-pointer"
       >
-        <div className="relative h-64 overflow-hidden">
+        <div className="relative h-72 overflow-hidden">
           <img
             src={image}
             alt={title}
-            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60" />
-
-          <div className="absolute top-4 left-4 flex gap-2">
-            <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${isPremium ? 'bg-amber-400 text-amber-950' : 'bg-[#881337] text-white'}`}>
-              {badge === 'venta' ? 'Sale' : badge === 'alquiler' ? 'Rent' : badge}
+          
+          {/* Status Badge */}
+          <div className="absolute top-5 left-5">
+            <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest backdrop-blur-md border shadow-lg ${
+              isPremium 
+                ? 'bg-amber-400/90 text-amber-950 border-amber-300' 
+                : 'bg-white/90 text-slate-900 border-white/50'
+            }`}>
+              {badge}
             </span>
           </div>
 
-          <div className="absolute bottom-4 left-4 text-white">
-            <p className="text-lg font-bold shadow-black/50 drop-shadow-md">{price}</p>
+          {referencia && (
+            <div className="absolute top-5 right-5 z-20">
+              <span className="text-[9px] font-black px-3 py-1 rounded-lg uppercase tracking-widest bg-white/95 text-slate-800 shadow-md border border-white/50 backdrop-blur-sm">
+                {referencia}
+              </span>
+            </div>
+          )}
+
+          {/* Price Overlay */}
+          <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent">
+            <p className="text-2xl font-black text-white tracking-tighter drop-shadow-lg">
+              {price}
+            </p>
           </div>
         </div>
 
-        <div className="p-5 flex flex-col flex-grow">
-          <div className="mb-3">
-            <h3 className="text-lg font-bold text-slate-900 mb-1 group-hover:text-[#881337] transition-colors line-clamp-1">{title}</h3>
-            <div className="flex items-center text-slate-500 text-sm">
-              <MapPin className="h-4 w-4 mr-1 text-[#881337]" />
+        <div className="p-6 flex flex-col flex-grow bg-white">
+          <div className="mb-6">
+            <div className="flex items-center text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2 gap-2">
+              <MapPin className="h-3 w-3 text-[#881337]" />
               {location}
             </div>
+            <h3 className="text-xl font-black text-slate-900 leading-tight group-hover:text-[#881337] transition-colors line-clamp-2">
+              {title}
+            </h3>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 py-3 border-t border-slate-100 mt-auto">
-            <SpecItem icon={<Bed className="h-4 w-4" />} value={specs.beds} label={specs.beds === 1 ? "bed" : "beds"} />
-            <SpecItem icon={<Bath className="h-4 w-4" />} value={specs.baths} label={specs.baths === 1 ? "bath" : "baths"} />
+          <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-50 mt-auto">
+            <SpecItem icon={<Bed className="h-4 w-4" />} value={specs.beds} label={specs.beds === 1 ? "Bed" : "Beds"} />
+            <SpecItem icon={<Bath className="h-4 w-4" />} value={specs.baths} label={specs.baths === 1 ? "Bath" : "Baths"} />
             <SpecItem icon={<Maximize className="h-4 w-4" />} value={specs.area} label="m²" />
           </div>
         </div>
