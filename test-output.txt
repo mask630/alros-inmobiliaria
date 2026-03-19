@@ -1,0 +1,2 @@
+﻿[dotenv@17.3.1] injecting env (3) from .env.local -- tip: ­ƒöÉ prevent committing .env to code: https://dotenvx.com/precommit
+Error checking columns: 42703 column properties.title_en does not exist

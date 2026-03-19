@@ -1,0 +1,17 @@
+﻿[dotenv@17.3.1] injecting env (3) from .env.local -- tip: ­ƒöÉ encrypt with Dotenvx: https://dotenvx.com
+Column title_en: MISSING (42703)
+Column description_en: MISSING (42703)
+Column internal_notes: OK
+Column has_keys: OK
+Column commission_percentage: OK
+Column community_fees: OK
+Column garbage_tax: OK
+Column ibi: OK
+Column kitchen_type: OK
+Column terrace_meters: OK
+Column plot_m2: OK
+Column furnished: OK
+Column garage_num: OK
+Column views_type: OK
+Column province: OK
+Column internal_location_notes: OK

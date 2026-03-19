@@ -1,0 +1,15 @@
+node_modules
+.next
+/*.local
+public/propiedades
+/test-*.ts
+/test-*.js
+/tmp
+/.vercel
+*.MOV
+*.mp4
+*.zip
+*.log
+/public/propiedades/
+# Do not ignore .json, it includes package.json and components.json
+# *.json
