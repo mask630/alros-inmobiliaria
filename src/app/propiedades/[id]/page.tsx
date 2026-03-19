@@ -119,7 +119,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                                 </div>
                                 <div className="text-right">
                                     <p className="text-3xl font-bold text-blue-600 whitespace-nowrap">{Number(property.price).toLocaleString('de-DE')} €</p>
-                                    <p className="text-sm text-slate-500">Ref: {property.reference_id || property.id.slice(0, 8)}</p>
+                                    <p className="text-sm text-slate-500">Ref: {property.referencia || property.reference_id || property.id.slice(0, 8)}</p>
                                 </div>
                             </div>
 
@@ -242,8 +242,8 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                                         currentPropertyId={property.id}
                                         currentCity={property.city}
                                         approximateAddress={approximateAddress}
-                                        publicLat={property.public_latitude || property.features?.public_latitude}
-                                        publicLng={property.public_longitude || property.features?.public_longitude}
+                                        publicLat={property.lat || property.public_latitude || property.features?.public_latitude}
+                                        publicLng={property.lng || property.public_longitude || property.features?.public_longitude}
                                     />
                                 </div>
                             </details>
@@ -271,7 +271,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                             />
 
                             <div className="mt-6 pt-6 border-t text-center text-sm text-slate-500">
-                                <p>Referencia del inmueble: {property.reference_id || property.id.slice(0, 8)}</p>
+                                <p>Referencia del inmueble: {property.referencia || property.reference_id || property.id.slice(0, 8)}</p>
                                 <p className="mt-1">Publicado el {new Date(property.created_at).toLocaleDateString()}</p>
                             </div>
                         </div>

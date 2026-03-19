@@ -172,7 +172,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                                 </div>
                                 <div className="text-right">
                                     <p className="text-3xl font-bold text-blue-600 whitespace-nowrap">{Number(property.price).toLocaleString('de-DE')} €</p>
-                                    <p className="text-sm text-slate-500">Ref: {property.reference_id || property.id.slice(0, 8)}</p>
+                                    <p className="text-sm text-slate-500">Ref: {property.referencia || property.reference_id || property.id.slice(0, 8)}</p>
                                 </div>
                             </div>
 
@@ -295,8 +295,8 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                                         currentPropertyId={property.id}
                                         currentCity={property.city}
                                         approximateAddress={approximateAddress}
-                                        publicLat={property.public_latitude || property.features?.public_latitude}
-                                        publicLng={property.public_longitude || property.features?.public_longitude}
+                                        publicLat={property.lat || property.public_latitude || property.features?.public_latitude}
+                                        publicLng={property.lng || property.public_longitude || property.features?.public_longitude}
                                         locale="en"
                                     />
                                 </div>
@@ -313,7 +313,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                                 <div className="flex gap-2">
                                     <PropertyShareButton
                                         propertyTitle={property.title_en || property.title}
-                                        propertyRef={property.reference_id || property.id.slice(0, 8)}
+                                        propertyRef={property.referencia || property.reference_id || property.id.slice(0, 8)}
                                         propertyId={property.id}
                                         locale="en"
                                     />
@@ -322,12 +322,12 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
 
                             <PropertyContactForm
                                 propertyTitle={property.title_en || property.title}
-                                propertyRef={property.reference_id || property.id.slice(0, 8)}
+                                propertyRef={property.referencia || property.reference_id || property.id.slice(0, 8)}
                                 locale="en"
                             />
 
                             <div className="mt-6 pt-6 border-t text-center text-sm text-slate-500">
-                                <p>Property Reference: {property.reference_id || property.id.slice(0, 8)}</p>
+                                <p>Property Reference: {property.referencia || property.reference_id || property.id.slice(0, 8)}</p>
                                 <p className="mt-1">Published on {new Date(property.created_at).toLocaleDateString()}</p>
                             </div>
                         </div>

@@ -409,7 +409,8 @@ export default function EditPropertyPage() {
     };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (!event.target.files?.length) return;
+        const selectedFiles = Array.from(event.target.files || []);
+        if (selectedFiles.length === 0) return;
 
         if (!formData.reference_id) {
             alert("Para subir fotos, esta propiedad debe tener un número de Referencia ID.");
@@ -417,41 +418,68 @@ export default function EditPropertyPage() {
         }
 
         setIsUploading(true);
-        const data = new FormData();
-        data.append('reference_id', formData.reference_id);
-
-        Array.from(event.target.files).forEach((file) => {
-            data.append('files', file);
-        });
+        const refId = formData.reference_id;
+        let successfulImages: string[] = [...formData.images];
+        let errorCount = 0;
+        let successCount = 0;
 
         const toast = document.createElement("div");
-        toast.className = "fixed bottom-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-xl shadow-xl z-50 transition-all font-medium text-sm flex items-center gap-3";
-        toast.innerHTML = '<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Subiendo y optimizando fotos, por favor espera...';
+        toast.className = "fixed bottom-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-xl shadow-xl z-50 transition-all font-medium text-sm flex flex-col gap-2 min-w-[300px]";
         document.body.appendChild(toast);
 
         try {
-            const response = await fetch('/api/upload-images', {
-                method: 'POST',
-                body: data
-            });
-            const result = await response.json();
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                
+                // Update progress in toast
+                toast.innerHTML = `
+                    <div className="flex items-center gap-3">
+                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 
+                        <span>Subiendo foto ${i + 1} de ${selectedFiles.length}...</span>
+                    </div>
+                    <div class="w-full bg-blue-400/30 rounded-full h-1.5 mt-1 overflow-hidden">
+                        <div class="bg-white h-full transition-all duration-300" style="width: ${(i / selectedFiles.length) * 100}%"></div>
+                    </div>
+                `;
 
-            if (result.success && result.images) {
-                setFormData(prev => ({
-                    ...prev,
-                    images: result.images as string[],
-                    imageUrl: (result.images as string[])[0]
-                }));
-                const msg = result.optimizedCount && result.optimizedCount > 0
-                    ? `Se subieron y optimizaron ${result.optimizedCount} imágenes con éxito.`
-                    : `Se subieron las imágenes con éxito.`;
-                alert(msg);
-            } else {
-                alert(result.error || "Hubo un error al subir las fotos.");
+                const data = new FormData();
+                data.append('reference_id', refId);
+                data.append('files', file); // Use same name 'files' for back-compatibility with current API
+
+                try {
+                    const response = await fetch('/api/upload-images', {
+                        method: 'POST',
+                        body: data
+                    });
+                    const result = await response.json();
+
+                    if (result.success && result.images) {
+                        // After each successful upload, we get the updated list from the scan
+                        successfulImages = result.images;
+                        successCount++;
+                        
+                        // Set current images so user sees progress in gallery
+                        setFormData(prev => ({
+                            ...prev,
+                            images: result.images as string[],
+                            imageUrl: (result.images as string[])[0]
+                        }));
+                    } else {
+                        console.error(`Error uploading ${file.name}:`, result.error);
+                        errorCount++;
+                    }
+                } catch (err) {
+                    console.error(`Network error on ${file.name}:`, err);
+                    errorCount++;
+                }
             }
+
+            const msg = `Proceso finalizado.\n✅ ${successCount} fotos subidas y optimizadas correctamente.${errorCount > 0 ? `\n❌ ${errorCount} fotos fallaron.` : ''}`;
+            alert(msg);
+
         } catch (e) {
             console.error(e);
-            alert("Error de red al subir las fotos.");
+            alert("Error general durante la subida.");
         } finally {
             document.body.removeChild(toast);
             setIsUploading(false);
