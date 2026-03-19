@@ -23,6 +23,9 @@ async function getProperties(params: any) {
     if (params.operation && params.operation !== 'todos') {
         query = query.eq('operation_type', params.operation);
     }
+    if (params.city && params.city !== 'todas') {
+        query = query.eq('city', params.city);
+    }
 
     const { data: properties, error } = await query;
 

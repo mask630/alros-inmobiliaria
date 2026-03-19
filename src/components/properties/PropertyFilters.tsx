@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Filter, X, Bed, Bath } from "lucide-react";
+import { Search, Filter, X, Bed, Bath, MapPin } from "lucide-react";
 
 // Property type categories
 const PROPERTY_TYPES = {
@@ -31,6 +31,7 @@ export function PropertyFilters({ locale = 'es' }: { locale?: string }) {
         maxPrice: searchParams.get('maxPrice') || '',
         bedrooms: searchParams.get('bedrooms') || '',
         bathrooms: searchParams.get('bathrooms') || '',
+        city: searchParams.get('city') || searchParams.get('zone') || '',
     });
 
     const [isOpen, setIsOpen] = useState(false);
@@ -43,6 +44,7 @@ export function PropertyFilters({ locale = 'es' }: { locale?: string }) {
             maxPrice: searchParams.get('maxPrice') || '',
             bedrooms: searchParams.get('bedrooms') || '',
             bathrooms: searchParams.get('bathrooms') || '',
+            city: searchParams.get('city') || searchParams.get('zone') || '',
         });
     }, [searchParams]);
 
@@ -65,13 +67,14 @@ export function PropertyFilters({ locale = 'es' }: { locale?: string }) {
         if (filters.maxPrice) params.set('maxPrice', filters.maxPrice);
         if (filters.bedrooms) params.set('bedrooms', filters.bedrooms);
         if (filters.bathrooms) params.set('bathrooms', filters.bathrooms);
+        if (filters.city) params.set('city', filters.city);
 
         router.push(locale === 'en' ? `/en/propiedades?${params.toString()}` : `/propiedades?${params.toString()}`);
         setIsOpen(false);
     };
 
     const clearFilters = () => {
-        setFilters({ operation: '', type: '', maxPrice: '', bedrooms: '', bathrooms: '' });
+        setFilters({ operation: '', type: '', maxPrice: '', bedrooms: '', bathrooms: '', city: '' });
         router.push(locale === 'en' ? '/en/propiedades' : '/propiedades');
         setIsOpen(false);
     };
@@ -145,6 +148,25 @@ export function PropertyFilters({ locale = 'es' }: { locale?: string }) {
                                 </optgroup>
                             </select>
                             <Filter size={14} className="absolute right-2 top-3.5 text-slate-400 pointer-events-none" />
+                        </div>
+
+                        {/* City / Zone Selector */}
+                        <div className="relative group border-r border-slate-200 px-2">
+                            <select
+                                name="city"
+                                value={filters.city}
+                                onChange={handleChange}
+                                className="pl-3 pr-8 py-2.5 bg-transparent text-sm font-black text-slate-700 outline-none cursor-pointer appearance-none hover:text-[#881337] transition-colors"
+                            >
+                                <option value="">{locale === 'en' ? 'All Areas' : 'Todas las zonas'}</option>
+                                <option value="Benalmádena">Benalmádena</option>
+                                <option value="Fuengirola">Fuengirola</option>
+                                <option value="Mijas">Mijas</option>
+                                <option value="Torremolinos">Torremolinos</option>
+                                <option value="Málaga">Málaga</option>
+                                <option value="Marbella">Marbella</option>
+                            </select>
+                            <MapPin size={14} className="absolute right-2 top-3.5 text-slate-400 pointer-events-none" />
                         </div>
 
                         {/* Max Price Input */}

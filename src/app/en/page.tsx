@@ -69,8 +69,9 @@ export default function HomePageEN() {
     router.push(`/en/propiedades?${params.toString()}`);
   };
 
-  // Get unique zones from properties
-  const zones = ['todas', ...new Set(allProperties.map(p => p.city).filter(Boolean))];
+  // Enhanced zones for better filter experience
+  const recommendedZones = ['Benalmádena', 'Fuengirola', 'Mijas', 'Torremolinos', 'Málaga', 'Marbella'];
+  const zones = ['todas', ...new Set([...recommendedZones, ...allProperties.map(p => p.city).filter(Boolean)])];
 
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },
