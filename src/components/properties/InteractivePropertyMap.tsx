@@ -17,6 +17,12 @@ interface Property {
     city: string;
     price: number;
     operation_type: string;
+    latitude?: number;
+    longitude?: number;
+    public_latitude?: number;
+    public_longitude?: number;
+    image?: string;
+    images?: string[];
     features?: {
         bedrooms?: number;
         bathrooms?: number;
@@ -60,8 +66,10 @@ export function InteractivePropertyMap({ currentPropertyId, currentCity, approxi
             try {
                 const res = await fetch(`/api/properties?exclude=${currentPropertyId}&limit=50`);
                 const data = await res.json();
-                // solo coger las que tienen lat y lng
-                const validProps = (data.properties || []).filter((p: Property) => p.features?.latitude && p.features?.longitude);
+                // solo coger las que tienen lat y lng (en raiz o en features)
+                const validProps = (data.properties || []).filter((p: Property) => 
+                    (p.latitude && p.longitude) || (p.features?.latitude && p.features?.longitude)
+                );
                 setOtherProperties(validProps);
             } catch (error) {
                 console.error("Error fetching other properties:", error);

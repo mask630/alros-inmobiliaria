@@ -8,7 +8,7 @@ export async function GET(request: Request) {
 
     let query = supabase
         .from('properties')
-        .select('id, title, city, price, operation_type, features')
+        .select('id, title, city, price, operation_type, latitude, longitude, public_latitude, public_longitude, image, images, features')
         .order('created_at', { ascending: false })
         .limit(limit);
 
