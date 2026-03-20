@@ -1,32 +1,32 @@
 export default function AvisoLegalPage() {
     return (
-        <div className="container mx-auto px-4 py-16 max-w-4xl">
-            <h1 className="text-3xl font-bold mb-8 text-slate-900">Aviso Legal</h1>
+        <div className="container mx-auto px-4 py-16 max-w-4xl text-slate-600">
+            <h1 className="text-3xl font-bold mb-8 text-slate-900">Legal Notice</h1>
 
             <div className="prose prose-slate max-w-none">
-                <p>En cumplimiento de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), la entidad ALROS INVESTMENTS S.L. le informa que es titular del sitio web. De acuerdo con la exigencia del artículo 10 de la citada Ley, informa de los siguientes datos:</p>
+                <p>In compliance with Law 34/2002, of July 11, on Information Society Services and Electronic Commerce (LSSI-CE), the entity ALROS INVESTMENTS S.L. informs you that it is the owner of this website. In accordance with the requirements of Article 10 of said Law, it provides the following information:</p>
 
-                <h3 className="mt-8 mb-4 font-bold text-xl">1. Datos Identificativos</h3>
-                <p>El titular de este sitio web es: <strong>ALROS INVESTMENTS S.L.</strong></p>
-                <p>NIF: B92476977</p>
-                <p>Domicilio social: Avenida Juan Luis Peralta 22, Benalmádena, Málaga</p>
-                <p>Teléfono: 691 687 316</p>
+                <h3 className="mt-8 mb-4 font-bold text-xl text-slate-800">1. Identifying Data</h3>
+                <p>The owner of this website is: <strong>ALROS INVESTMENTS S.L.</strong></p>
+                <p>NIF (Tax ID): B92476977</p>
+                <p>Registered office: Avenida Juan Luis Peralta 22, Benalmádena, Málaga</p>
+                <p>Phone: (+34) 691 687 316</p>
                 <p>Email: Isaac.alros@gmail.com</p>
 
-                <h3 className="mt-8 mb-4 font-bold text-xl">2. Usuarios</h3>
-                <p>El acceso y/o uso de este portal le atribuye la condición de USUARIO, que acepta, desde dicho acceso y/o uso, las Condiciones Generales de Uso aquí reflejadas. Las citadas Condiciones serán de aplicación independientemente de las Condiciones Generales de Contratación que en su caso resulten de obligado cumplimiento.</p>
+                <h3 className="mt-8 mb-4 font-bold text-xl text-slate-800">2. Users</h3>
+                <p>Access and/or use of this portal attributes the status of USER, who accepts, from said access and/or use, the General Conditions of Use reflected here. These Conditions shall apply independently of the General Terms and Conditions of Contract that, if applicable, are mandatory.</p>
 
-                <h3 className="mt-8 mb-4 font-bold text-xl">3. Uso del portal</h3>
-                <p>La página web proporciona el acceso a multitud de informaciones, servicios, programas o datos (en adelante, "los contenidos") en Internet pertenecientes a ALROS INVESTMENTS S.L. o a sus licenciantes a los que el USUARIO pueda tener acceso. El USUARIO asume la responsabilidad del uso del portal. Dicha responsabilidad se extiende al registro que fuese necesario para acceder a determinados servicios o contenidos.</p>
+                <h3 className="mt-8 mb-4 font-bold text-xl text-slate-800">3. Use of the portal</h3>
+                <p>The website provides access to a multitude of information, services, programs, or data (hereinafter, "the contents") on the Internet belonging to ALROS INVESTMENTS S.L. or its licensors to which the USER may have access. The USER assumes responsibility for the use of the portal. This responsibility extends to the registration that may be necessary to access certain services or contents.</p>
 
-                <h3 className="mt-8 mb-4 font-bold text-xl">4. Propiedad Intelectual e Industrial</h3>
-                <p>ALROS INVESTMENTS S.L. por sí o como cesionaria, es titular de todos los derechos de propiedad intelectual e industrial de su página web, así como de los elementos contenidos en la misma (a título enunciativo, imágenes, sonido, audio, vídeo, software o textos; marcas o logotipos, combinaciones de colores, estructura y diseño, selección de materiales usados, programas de ordenador necesarios para su funcionamiento, acceso y uso, etc.), titularidad de ALROS INVESTMENTS S.L.. Todos los derechos reservados.</p>
+                <h3 className="mt-8 mb-4 font-bold text-xl text-slate-800">4. Intellectual and Industrial Property</h3>
+                <p>ALROS INVESTMENTS S.L., by itself or as an assignee, is the owner of all intellectual and industrial property rights of its website, as well as the elements contained therein (by way of illustration: images, sound, audio, video, software, or text; trademarks or logos, color combinations, structure and design, selection of materials used, computer programs necessary for its operation, access and use, etc.), owned by ALROS INVESTMENTS S.L.. All rights reserved.</p>
 
-                <h3 className="mt-8 mb-4 font-bold text-xl">5. Exclusión de garantías y responsabilidad</h3>
-                <p>ALROS INVESTMENTS S.L. no se hace responsable, en ningún caso, de los daños y perjuicios de cualquier naturaleza que pudieran ocasionar, a título enunciativo: errores u omisiones en los contenidos, falta de disponibilidad del portal o la transmisión de virus o programas maliciosos o lesivos en los contenidos, a pesar de haber adoptado todas las medidas tecnológicas necesarias para evitarlo.</p>
+                <h3 className="mt-8 mb-4 font-bold text-xl text-slate-800">5. Exclusion of Warranties and Liability</h3>
+                <p>ALROS INVESTMENTS S.L. is not responsible, under any circumstances, for damages of any nature that may be caused by, but not limited to: errors or omissions in the contents, lack of availability of the portal, or the transmission of viruses or malicious or harmful programs in the contents, despite having adopted all the necessary technological measures to prevent it.</p>
 
-                <h3 className="mt-8 mb-4 font-bold text-xl">6. Modificaciones</h3>
-                <p>ALROS INVESTMENTS S.L. se reserva el derecho de efectuar sin previo aviso las modificaciones que considere oportunas en su portal, pudiendo cambiar, suprimir o añadir tanto los contenidos y servicios que se presten a través de la misma como la forma en la que éstos aparezcan presentados o localizados en su portal.</p>
+                <h3 className="mt-8 mb-4 font-bold text-xl text-slate-800">6. Modifications</h3>
+                <p>ALROS INVESTMENTS S.L. reserves the right to make unannounced modifications it deems appropriate to its portal, being able to change, delete, or add both the content and services provided through it and the way they are presented or located on its portal.</p>
             </div>
         </div>
     );

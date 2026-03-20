@@ -1,25 +1,25 @@
 export default function CookiesPage() {
     return (
         <div className="container mx-auto px-4 py-16 max-w-4xl">
-            <h1 className="text-3xl font-bold mb-8 text-slate-900">Política de Cookies</h1>
+            <h1 className="text-3xl font-bold mb-8 text-slate-900">Cookies Policy</h1>
 
-            <div className="prose prose-slate max-w-none">
-                <p>Una cookie es un pequeño fichero de texto que se almacena en su navegador cuando visita casi cualquier página web. Su utilidad es que la web sea capaz de recordar su visita cuando vuelva a navegar por esa página.</p>
+            <div className="prose prose-slate max-w-none text-slate-600">
+                <p>A cookie is a small text file that is stored in your browser when you visit almost any website. Its purpose is for the website to be able to remember your visit when you return to that page.</p>
 
-                <h3 className="mt-8 mb-4 font-bold text-xl">1. Cookies utilizadas en este sitio web</h3>
-                <p>Siguiendo las directrices de la Agencia Española de Protección de Datos procedemos a detallar el uso de cookies que hace esta web con el fin de informarle con la máxima exactitud posible.</p>
+                <h3 className="mt-8 mb-4 font-bold text-xl text-slate-800">1. Cookies used on this website</h3>
+                <p>Following the guidelines of the Spanish Data Protection Agency, we proceed to detail the use of cookies made by this website in order to inform you as accurately as possible.</p>
 
                 <ul className="list-disc pl-5 mt-4 space-y-2">
-                    <li><strong>Cookies propias:</strong> Son aquellas que se envían al equipo terminal del usuario desde un equipo o dominio gestionado por el propio editor y desde el que se presta el servicio solicitado por el usuario.</li>
-                    <li><strong>Cookies de sesión:</strong> Diseñadas para recabar y almacenar datos mientras el usuario accede a una página web.</li>
-                    <li><strong>Cookies técnicas:</strong> Permiten al usuario la navegación a través de una página web, plataforma o aplicación y la utilización de las diferentes opciones o servicios que en ella existan.</li>
+                    <li><strong>First-party cookies:</strong> These are cookies sent to the user's terminal equipment from a computer or domain managed by the editor itself and from which the service requested by the user is provided.</li>
+                    <li><strong>Session cookies:</strong> Designed to collect and store data while the user accesses a website.</li>
+                    <li><strong>Technical cookies:</strong> These allow the user to navigate through a website, platform, or application and use the different options or services that exist in it.</li>
                 </ul>
 
-                <h3 className="mt-8 mb-4 font-bold text-xl">2. Desactivación o eliminación de cookies</h3>
-                <p>En cualquier momento podrá ejercer su derecho de desactivación o eliminación de cookies de este sitio web. Estas acciones se realizan de forma diferente en función del navegador que esté usando.</p>
+                <h3 className="mt-8 mb-4 font-bold text-xl text-slate-800">2. Disabling or deleting cookies</h3>
+                <p>At any time you may exercise your right to disable or delete cookies from this website. These actions are performed differently depending on the browser you are using.</p>
 
-                <h3 className="mt-8 mb-4 font-bold text-xl">3. Notas adicionales</h3>
-                <p>Ni esta web ni sus representantes legales se hacen responsables ni del contenido ni de la veracidad de las políticas de privacidad que puedan tener los terceros mencionados en esta política de cookies.</p>
+                <h3 className="mt-8 mb-4 font-bold text-xl text-slate-800">3. Additional notes</h3>
+                <p>Neither this website nor its legal representatives are responsible for the content or the accuracy of the privacy policies that third parties mentioned in this cookie policy may have.</p>
             </div>
         </div>
     );

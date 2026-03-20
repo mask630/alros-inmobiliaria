@@ -25,7 +25,7 @@ export async function processChatMessage(message: string, locale: string = 'es')
     // 2. Fetch Public Properties (Limited data for context)
     const { data: properties } = await supabase
         .from('properties')
-        .select('referencia, title, price, operation_type, property_type, city, bedrooms, bathrooms')
+        .select('referencia, title, title_en, price, operation_type, property_type, city, bedrooms, bathrooms')
         .eq('status', 'disponible')
         .limit(5);
 
@@ -155,7 +155,7 @@ export async function processChatMessage(message: string, locale: string = 'es')
             const { data: byTitle } = await supabase
                 .from('properties')
                 .select('*')
-                .ilike('title', `%${keywords[0]}%`)
+                .or(`title.ilike.%${keywords[0]}%,title_en.ilike.%${keywords[0]}%`)
                 .eq('status', 'disponible')
                 .limit(1)
                 .maybeSingle();
@@ -167,12 +167,13 @@ export async function processChatMessage(message: string, locale: string = 'es')
         const specs = targetProperty.features || {};
         const bedrooms = targetProperty.bedrooms || specs.bedrooms;
         const size = targetProperty.size_m2 || specs.size_m2;
+        const propertyTitle = isEn ? (targetProperty.title_en || targetProperty.title) : targetProperty.title;
         
         return {
             success: true,
             reply: isEn
-                ? `Great choice! 😍 I see you're interested in: "${targetProperty.title}" (Ref: ${targetProperty.referencia}).\n\nIt's a wonderful ${bedrooms} bedroom property with ${size}m² in ${targetProperty.city}. It's available for ${targetProperty.price.toLocaleString('de-DE')}€.\n\nWould you like to schedule a viewing? Or if you prefer, I can send you more details or have a colleague call you.`
-                : `¡Qué buena elección! 😍 Veo que te interesa: "${targetProperty.title}" (Ref: ${targetProperty.referencia}).\n\nEs una maravilla de ${bedrooms} dormitorios y ${size}m² en ${targetProperty.city}. Está disponible por ${targetProperty.price.toLocaleString('de-DE')}€.\n\n¿Te gustaría que agendemos un hueco para ir a verla? O si lo prefieres, puedo pasarte más detalles o avisar a un compañero para que te llame.`,
+                ? `Great choice! 😍 I see you're interested in: "${propertyTitle}" (Ref: ${targetProperty.referencia}).\n\nIt's a wonderful ${bedrooms} bedroom property with ${size}m² in ${targetProperty.city}. It's available for ${targetProperty.price.toLocaleString('de-DE')}€.\n\nWould you like to schedule a viewing? Or if you prefer, I can send you more details or have a colleague call you.`
+                : `¡Qué buena elección! 😍 Veo que te interesa: "${propertyTitle}" (Ref: ${targetProperty.referencia}).\n\nEs una maravilla de ${bedrooms} dormitorios y ${size}m² en ${targetProperty.city}. Está disponible por ${targetProperty.price.toLocaleString('de-DE')}€.\n\n¿Te gustaría que agendemos un hueco para ir a verla? O si lo prefieres, puedo pasarte más detalles o avisar a un compañero para que te llame.`,
             navigateTo: isEn ? `/en/propiedades/${targetProperty.id}` : `/propiedades/${targetProperty.id}`,
             suggestions: isEn ? ["I want to see it!", "More details", "Call me"] : ["¡Quiero verla!", "Más detalles", "Que me llamen"]
         };
@@ -202,9 +203,12 @@ export async function processChatMessage(message: string, locale: string = 'es')
     if (query.includes('piso') || query.includes('casa') || query.includes('house') || query.includes('apartment') || query.includes('property')) {
         let reply = isEn ? "We currently have several properties available. " : "Actualmente tenemos varias propiedades disponibles. ";
         if (properties && properties.length > 0) {
-            const list = properties.map(p => isEn 
-                ? `- ${p.title} in ${p.city} (${p.price}€)`
-                : `- ${p.title} en ${p.city} (${p.price}€)`).join('\n');
+            const list = properties.map(p => {
+                const pTitle = isEn ? (p.title_en || p.title) : p.title;
+                return isEn 
+                    ? `- ${pTitle} in ${p.city} (${p.price}€)`
+                    : `- ${pTitle} en ${p.city} (${p.price}€)`;
+            }).join('\n');
             reply += isEn 
                 ? `Here are some highlighted ones:\n\n${list}\n\nAre you looking for something specific regarding price or area?`
                 : `Aquí tienes algunas destacadas:\n\n${list}\n\n¿Buscas algo en concreto por precio o zona?`;

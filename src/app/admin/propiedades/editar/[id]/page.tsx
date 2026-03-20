@@ -663,7 +663,7 @@ export default function EditPropertyPage() {
         if (formData.terrace && formData.terrace_meters) featuresList.push(`una magnífica terraza de ${formData.terrace_meters}m² ideal para disfrutar del clima de la zona`);
         else if (formData.terrace) featuresList.push("una fantástica terraza");
 
-        if (formData.plot_m2) featuresList.push(`una amplia parcela privada de ${formData.plot_m2}m²`);
+        if (formData.plot_m2 && parseFloat(formData.plot_m2) > 0) featuresList.push(`una amplia parcela privada de ${formData.plot_m2}m²`);
 
         if (formData.kitchen_type) {
             const kType = formData.kitchen_type === 'americana' ? 'estilo americano' : (formData.kitchen_type === 'integrada' ? 'integrada en el salón' : 'independiente y totalmente equipada');
@@ -782,7 +782,7 @@ export default function EditPropertyPage() {
         const featuresListEn = [];
         if (formData.terrace && formData.terrace_meters) featuresListEn.push(`magnificent ${formData.terrace_meters}m² terrace ideal for enjoying the local climate`);
         else if (formData.terrace) featuresListEn.push("fantastic terrace");
-        if (formData.plot_m2) featuresListEn.push(`large private plot of ${formData.plot_m2}m²`);
+        if (formData.plot_m2 && parseFloat(formData.plot_m2) > 0) featuresListEn.push(`large private plot of ${formData.plot_m2}m²`);
         if (formData.kitchen_type) {
             const kType = formData.kitchen_type === 'americana' ? 'American-style' : (formData.kitchen_type === 'integrada' ? 'integrated into the living room' : 'independent and fully equipped');
             featuresListEn.push(`${kType} kitchen`);
