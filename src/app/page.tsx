@@ -63,20 +63,36 @@ export default function HomePage() {
       params.set('maxPrice', filters.maxPrice.toString());
     }
     if (filters.zone !== 'todas') {
-      params.set('zone', filters.zone);
+      params.set('city', filters.zone);
     }
 
     router.push(`/propiedades?${params.toString()}`);
   };
 
-  // Dynamic zones based on existing properties (Case-insensitive & Unique)
-  const zonesRaw = allProperties.map(p => p.city?.trim()).filter(Boolean);
-  const zonesNormalized = Array.from(new Set(zonesRaw.map(z => z.toLowerCase())))
-    .map(lower => zonesRaw.find(z => z.toLowerCase() === lower)) as string[];
+  // Dynamic zones based on existing properties (Intelligent normalization)
+  const zones = (() => {
+    const normalize = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const zonesMap: Record<string, string> = {};
     
-  const zones = ['todas', ...zonesNormalized].sort((a, b) => 
-    a === 'todas' ? -1 : b === 'todas' ? 1 : a.localeCompare(b)
-  );
+    allProperties.forEach(p => {
+      const city = p.city?.trim();
+      if (!city) return;
+      
+      const isBenalmadena = normalize(city) === 'benalmadena';
+      // If it's Benalmádena, we try to use the zone if available for better detail
+      const displayValue = (isBenalmadena && p.zone) ? p.zone : city;
+      
+      const key = normalize(displayValue);
+      // We keep the first one we find or the one with better formatting if needed
+      if (!zonesMap[key]) {
+        zonesMap[key] = displayValue;
+      }
+    });
+    
+    return ['todas', ...Object.values(zonesMap)].sort((a: string, b: string) => 
+      a === 'todas' ? -1 : b === 'todas' ? 1 : a.localeCompare(b)
+    );
+  })();
 
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },

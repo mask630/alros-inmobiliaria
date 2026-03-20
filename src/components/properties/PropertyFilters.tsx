@@ -20,7 +20,7 @@ const PROPERTY_TYPES = {
     }
 };
 
-export function PropertyFilters({ locale = 'es' }: { locale?: string }) {
+export function PropertyFilters({ locale = 'es', zones = [] }: { locale?: string, zones?: string[] }) {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -159,26 +159,18 @@ export function PropertyFilters({ locale = 'es' }: { locale?: string }) {
                                 className="pl-3 pr-8 py-2.5 bg-transparent text-sm font-black text-slate-700 outline-none cursor-pointer appearance-none hover:text-[#881337] transition-colors"
                             >
                                 <option value="">{locale === 'en' ? 'All Areas' : 'Todas las zonas'}</option>
-                                <optgroup label="Costa Central">
-                                    <option value="Benalmádena">Benalmádena</option>
-                                    <option value="Fuengirola">Fuengirola</option>
-                                    <option value="Torremolinos">Torremolinos</option>
-                                    <option value="Mijas">Mijas</option>
-                                </optgroup>
-                                <optgroup label="Costa Poniente">
-                                    <option value="Marbella">Marbella</option>
-                                    <option value="Estepona">Estepona</option>
-                                    <option value="Casares">Casares</option>
-                                    <option value="Manilva">Manilva</option>
-                                </optgroup>
-                                <optgroup label="Málaga">
-                                    <option value="Málaga">Málaga</option>
-                                </optgroup>
-                                <optgroup label="Costa Oriente">
-                                    <option value="Rincón de la Victoria">Rincón de la Victoria</option>
-                                    <option value="Vélez-Málaga">Vélez-Málaga</option>
-                                    <option value="Nerja">Nerja</option>
-                                </optgroup>
+                                {zones && zones.length > 0 ? (
+                                    zones.map(zone => (
+                                        <option key={zone} value={zone}>{zone}</option>
+                                    ))
+                                ) : (
+                                    <optgroup label="Costa Central">
+                                        <option value="Benalmádena">Benalmádena</option>
+                                        <option value="Fuengirola">Fuengirola</option>
+                                        <option value="Torremolinos">Torremolinos</option>
+                                        <option value="Mijas">Mijas</option>
+                                    </optgroup>
+                                )}
                             </select>
                             <MapPin size={14} className="absolute right-2 top-3.5 text-slate-400 pointer-events-none" />
                         </div>

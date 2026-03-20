@@ -24,7 +24,8 @@ async function getProperties(params: any) {
         query = query.eq('operation_type', params.operation);
     }
     if (params.city && params.city !== 'todas') {
-        query = query.eq('city', params.city);
+        const c = params.city as string;
+        query = query.or(`city.eq."${c}",zone.eq."${c}"`);
     }
 
     const { data: properties, error } = await query;
@@ -162,13 +163,31 @@ async function getProperties(params: any) {
 export default async function PropertiesPage({ searchParams }: Props) {
     const params = await Promise.resolve(searchParams);
     const properties = await getProperties(params);
+    
+    // Fetch all properties once to get unique zones for the filter
+    const { data: allProperties } = await supabase.from('properties').select('city, zone').eq('status', 'disponible');
+    const availableZones = (() => {
+        const normalize = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        const zonesMap: Record<string, string> = {};
+        
+        allProperties?.forEach(p => {
+            const city = p.city?.trim();
+            if (!city) return;
+            const isBenalmadena = normalize(city) === 'benalmadena';
+            const displayValue = (isBenalmadena && p.zone) ? p.zone : city;
+            const key = normalize(displayValue);
+            if (!zonesMap[key]) zonesMap[key] = displayValue;
+        });
+        
+        return Object.values(zonesMap).sort((a, b) => a.localeCompare(b));
+    })();
 
     return (
         <div className="bg-slate-50 min-h-screen pb-20">
             {/* Header / Filter Bar */}
             <div className="bg-white border-b sticky top-16 z-40 shadow-sm">
                 <div className="container mx-auto px-4 py-4">
-                    <PropertyFilters locale="en" />
+                    <PropertyFilters locale="en" zones={availableZones} />
                 </div>
             </div>
 
