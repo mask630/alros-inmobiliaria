@@ -4,6 +4,7 @@ import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Chatbot } from "@/components/layout/Chatbot";
+import { CookieBanner } from "@/components/layout/CookieBanner";
 import { ScrollRestorer } from "@/components/layout/ScrollRestorer";
 
 const geistSans = Geist({
@@ -41,6 +42,21 @@ export default function RootLayout({
         </main>
         <Footer />
         <Chatbot />
+        <CookieBanner />
+        
+        {/* Anti-copy script for images & selection protection as requested */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          document.addEventListener('contextmenu', function(e) {
+            if (e.target.nodeName === 'IMG') {
+              e.preventDefault();
+            }
+          }, false);
+          document.addEventListener('dragstart', function(e) {
+            if (e.target.nodeName === 'IMG') {
+              e.preventDefault();
+            }
+          }, false);
+        `}} />
       </body>
     </html>
   );

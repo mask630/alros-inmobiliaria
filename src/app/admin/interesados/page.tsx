@@ -42,6 +42,7 @@ export default function InteresadosPage() {
     const [dateFilter, setDateFilter] = useState('todos'); // 'todos', 'hoy', 'semana', 'mes'
     const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+    const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
     // New state for pagination and bulk actions
     const [pageSize] = useState(25);
@@ -55,9 +56,23 @@ export default function InteresadosPage() {
         fetchLeads();
     }, [currentPage, statusFilter, originFilter, dateFilter, sortConfig]);
 
-    // Independent effect for counts to keep them updated
+    // Independent effect for counts and roles
     useEffect(() => {
         fetchSummaryStats();
+
+        // Fetch User Role
+        const fetchRole = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+                if (profile) setCurrentUserRole(profile.role);
+            }
+        };
+        fetchRole();
     }, []);
 
     const fetchSummaryStats = async () => {
@@ -146,6 +161,49 @@ export default function InteresadosPage() {
             setSelectedIds([]);
         }
         setLoading(false);
+    };
+
+    const handleBatchDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`¿Estás seguro de que quieres eliminar estos ${selectedIds.length} interesados? Esta acción es irreversible.`)) return;
+
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('interesados')
+                .delete()
+                .in('id', selectedIds);
+            
+            if (error) throw error;
+            
+            fetchLeads();
+            fetchSummaryStats();
+            setSelectedIds([]);
+        } catch (error) {
+            console.error('Error in batch delete:', error);
+            alert('Error al eliminar los elementos seleccionados.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteOne = async (id: string, name: string) => {
+        if (!confirm(`¿Estás seguro de que quieres eliminar al interesado "${name}"?`)) return;
+
+        try {
+            const { error } = await supabase
+                .from('interesados')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+            
+            fetchLeads();
+            fetchSummaryStats();
+        } catch (error) {
+            console.error('Error deleting lead:', error);
+            alert('Error al eliminar el interesado.');
+        }
     };
 
     const handleExportCSV = async () => {
@@ -313,10 +371,19 @@ export default function InteresadosPage() {
                             </button>
                             <button 
                                 onClick={() => handleBulkStatusUpdate('Baja')}
-                                className="flex-1 md:flex-none px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs font-bold transition-all"
+                                className="flex-1 md:flex-none px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-all border border-white/10"
                             >
-                                Dar de Baja
+                                Baja
                             </button>
+                            {currentUserRole === 'admin' && (
+                                <button 
+                                    onClick={handleBatchDelete}
+                                    className="flex-1 md:flex-none px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+                                >
+                                    <Trash2 size={14} />
+                                    <span>Eliminar Definitivo</span>
+                                </button>
+                            )}
                         </div>
                         <button 
                             onClick={() => setSelectedIds([])}
@@ -573,6 +640,15 @@ export default function InteresadosPage() {
                                                     <Link href={`/admin/interesados/editar/${lead.id}`} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-all" title="Editar">
                                                         <Edit size={18} />
                                                     </Link>
+                                                    {currentUserRole === 'admin' && (
+                                                        <button 
+                                                            onClick={() => handleDeleteOne(lead.id, lead.nombre_completo)}
+                                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded-lg transition-all" 
+                                                            title="Eliminar Permanente"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

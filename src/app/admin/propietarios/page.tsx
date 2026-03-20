@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Mail, Phone, Eye, Edit, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import { Search, Mail, Phone, Eye, Edit, ChevronUp, ChevronDown, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Owner } from "@/types/database.types";
 
@@ -11,16 +11,35 @@ export default function PropietariosPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [sortConfig, setSortConfig] = useState<{ key: keyof Owner; direction: 'asc' | 'desc' } | null>(null);
+    const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
     useEffect(() => {
         fetchOwners();
+
+        // Fetch User Role
+        const fetchRole = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+                if (profile) setCurrentUserRole(profile.role);
+            }
+        };
+        fetchRole();
     }, []);
 
     const fetchOwners = async () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('propietarios')
-            .select('*, updated_by_profile:profiles!propietarios_updated_by_fkey(first_name, last_name)')
+            .select(`
+                *, 
+                updated_by_profile:profiles!propietarios_updated_by_fkey(first_name, last_name),
+                properties_count:properties(count)
+            `)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -29,6 +48,35 @@ export default function PropietariosPage() {
             setOwners((data || []) as Owner[]);
         }
         setLoading(false);
+    };
+
+    const handleDelete = async (id: string, name: string, propCount: number = 0) => {
+        let msg = `¿Estás seguro de que quieres eliminar al propietario "${name}"?`;
+        
+        if (propCount > 0) {
+            msg = `⚠️ CUIDADO: El propietario "${name}" tiene ${propCount} propiedades asignadas.\n\n` +
+                  `Si lo borras, estas propiedades se quedarán "huérfanas" (sin dueño asignado).\n\n` +
+                  `¿Estás seguro de que quieres continuar?`;
+        } else {
+            msg += ` Esta acción no se puede deshacer.`;
+        }
+
+        if (!confirm(msg)) return;
+
+        try {
+            const { error } = await supabase
+                .from('propietarios')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            
+            // Re-fetch owners or remove from state locally
+            setOwners(prev => prev.filter(o => o.id !== id));
+        } catch (error) {
+            console.error('Error deleting owner:', error);
+            alert('Error al eliminar el propietario. Es posible que tenga registros relacionados importantes.');
+        }
     };
 
     const handleSort = (key: keyof Owner) => {
@@ -109,6 +157,7 @@ export default function PropietariosPage() {
                                 <div className="flex items-center gap-2">Identificación <SortIcon column="documento_identidad" /></div>
                             </th>
                             <th className="px-6 py-4 font-semibold text-slate-700">Contacto</th>
+                            <th className="px-6 py-4 font-semibold text-slate-700">Inmuebles</th>
                             <th className="px-6 py-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('tipo')}>
                                 <div className="flex items-center gap-2">Tipo <SortIcon column="tipo" /></div>
                             </th>
@@ -157,6 +206,11 @@ export default function PropietariosPage() {
                                             {owner.telefonos && owner.telefonos.length > 0 && <div className="flex items-center gap-1"><Phone size={14} /> {owner.telefonos[0]}</div>}
                                         </div>
                                     </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className={`inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-full font-bold text-xs ${((owner as any).properties_count?.[0]?.count || 0) > 0 ? 'bg-[#831832] text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}>
+                                            {(owner as any).properties_count?.[0]?.count || 0}
+                                        </span>
+                                    </td>
                                     <td className="px-6 py-4">
                                         <span className="px-2 py-1 bg-slate-100 rounded text-xs font-medium text-slate-600 capitalize">{owner.tipo || 'No definido'}</span>
                                     </td>
@@ -192,6 +246,18 @@ export default function PropietariosPage() {
                                             >
                                                 <Edit size={16} />
                                             </Link>
+                                            {currentUserRole === 'admin' && (
+                                                <button
+                                                    onClick={() => {
+                                                        const pCount = (owner as any).properties_count?.[0]?.count || 0;
+                                                        handleDelete(owner.id, owner.nombre_completo, pCount);
+                                                    }}
+                                                    className="p-1.5 bg-red-50 border border-red-100 hover:bg-red-100 hover:border-red-200 rounded text-red-600 transition-colors"
+                                                    title="Eliminar Propietario"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

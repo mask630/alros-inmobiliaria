@@ -49,7 +49,7 @@ export async function processChatMessage(message: string, locale: string = 'es')
     if (maxOverlap > 1 && bestMatch) {
         return {
             success: true,
-            reply: bestMatch.content,
+            reply: (isEn && bestMatch.content_en) ? bestMatch.content_en : bestMatch.content,
             suggestions: isEn ? ["Anything else?", "See properties"] : ["¿Algo más?", "Ver propiedades"]
         };
     }
@@ -205,9 +205,14 @@ export async function processChatMessage(message: string, locale: string = 'es')
         if (properties && properties.length > 0) {
             const list = properties.map(p => {
                 const pTitle = isEn ? (p.title_en || p.title) : p.title;
+                const pPrice = Number(p.price).toLocaleString('de-DE');
+                const operation = isEn 
+                    ? (p.operation_type === 'alquiler' ? '€/month' : '€')
+                    : (p.operation_type === 'alquiler' ? '€/mes' : '€');
+                
                 return isEn 
-                    ? `- ${pTitle} in ${p.city} (${p.price}€)`
-                    : `- ${pTitle} en ${p.city} (${p.price}€)`;
+                    ? `- ${pTitle} in ${p.city} (${pPrice}${operation})`
+                    : `- ${pTitle} en ${p.city} (${pPrice}${operation})`;
             }).join('\n');
             reply += isEn 
                 ? `Here are some highlighted ones:\n\n${list}\n\nAre you looking for something specific regarding price or area?`

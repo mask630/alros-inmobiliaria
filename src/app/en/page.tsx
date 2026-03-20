@@ -69,9 +69,14 @@ export default function HomePageEN() {
     router.push(`/en/propiedades?${params.toString()}`);
   };
 
-  // Enhanced zones for better filter experience
-  const recommendedZones = ['Benalmádena', 'Fuengirola', 'Mijas', 'Torremolinos', 'Málaga', 'Marbella'];
-  const zones = ['todas', ...new Set([...recommendedZones, ...allProperties.map(p => p.city).filter(Boolean)])];
+  // Dynamic zones based on existing properties (Case-insensitive & Unique)
+  const zonesRaw = allProperties.map(p => p.city?.trim()).filter(Boolean);
+  const zonesNormalized = Array.from(new Set(zonesRaw.map(z => z.toLowerCase())))
+    .map(lower => zonesRaw.find(z => z.toLowerCase() === lower)) as string[];
+    
+  const zones = ['todas', ...zonesNormalized].sort((a, b) => 
+    a === 'todas' ? -1 : b === 'todas' ? 1 : a.localeCompare(b)
+  );
 
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },

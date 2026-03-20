@@ -28,7 +28,7 @@ export function Chatbot() {
         }
     }, [pathname, isEn, initialGreetingSet]);
     const [input, setInput] = useState('');
-    const [leadData, setLeadData] = useState({ nombre: '', email: '', telefono: '', mensaje: '' });
+    const [leadData, setLeadData] = useState({ nombre: '', email: '', telefono: '', mensaje: '', gdpr: false });
     const [leadStatus, setLeadStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -134,7 +134,7 @@ export function Chatbot() {
                 setTimeout(() => {
                     setLeadStatus('idle');
                     setShowLeadForm(false);
-                    setLeadData({ nombre: '', email: '', telefono: '', mensaje: '' });
+                    setLeadData({ nombre: '', email: '', telefono: '', mensaje: '', gdpr: false });
                     
                     setMessages(prev => [...prev, { 
                         role: 'agent', 
@@ -320,10 +320,34 @@ export function Chatbot() {
                                                 onChange={e => setLeadData({...leadData, telefono: e.target.value})}
                                             />
                                         </div>
+                                        
+                                        {/* GDPR Checkbox */}
+                                        <div className="space-y-4 py-2 border-t border-slate-100">
+                                            <label className="flex items-start gap-2 cursor-pointer group">
+                                                <input 
+                                                    type="checkbox" 
+                                                    required 
+                                                    checked={leadData.gdpr}
+                                                    onChange={e => setLeadData({...leadData, gdpr: e.target.checked})}
+                                                    className="mt-1 rounded text-blue-600 focus:ring-blue-500 border-slate-300" 
+                                                />
+                                                <span className="text-[10px] text-slate-500 group-hover:text-slate-700 transition-colors leading-tight">
+                                                    {isEn ? "I have read and accept the " : "He leído y acepto la "}
+                                                    <Link href={isEn ? "/en/privacidad" : "/privacidad"} target="_blank" className="text-blue-600 font-bold hover:underline">
+                                                        {isEn ? "Privacy Policy" : "Política de Privacidad"}
+                                                    </Link> *
+                                                </span>
+                                            </label>
+
+                                            <div className="text-[9px] text-slate-400 bg-slate-50 p-2 rounded-lg border border-slate-100 leading-tight">
+                                                <strong>{isEn ? "Responsible" : "Responsable"}:</strong> Alros Investments S.L. | <strong>{isEn ? "Purpose" : "Finalidad"}:</strong> {isEn ? "Manage request & contact" : "Gestionar consulta y contacto"}.
+                                            </div>
+                                        </div>
+
                                         <button 
                                             type="submit"
-                                            disabled={leadStatus === 'sending'}
-                                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
+                                            disabled={leadStatus === 'sending' || !leadData.gdpr}
+                                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
                                         >
                                             {leadStatus === 'sending' ? <Loader2 className="animate-spin" size={16} /> : (isEn ? 'SUBMIT REQUEST' : 'ENVIAR SOLICITUD')}
                                         </button>
