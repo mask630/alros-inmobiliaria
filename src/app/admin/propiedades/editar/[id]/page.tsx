@@ -284,10 +284,11 @@ export default function EditPropertyPage() {
                         const pubLat = currentFeatures.public_latitude || data.public_latitude;
                         const pubLon = currentFeatures.public_longitude || data.public_longitude;
                         if (pubLat && pubLon) setPublicCoordsInput(`${pubLat}, ${pubLon}`);
+
+                        // Load property documents
+                        await loadDocuments(data.reference_id || data.referencia);
                     }
                 }
-                // Load property documents
-                await loadDocuments();
             } catch (error) {
                 console.error("Error in fetchData: ", error);
             } finally {
@@ -555,9 +556,12 @@ export default function EditPropertyPage() {
         return `${ref}_${id}`;
     };
 
-    const loadDocuments = async () => {
+    const loadDocuments = async (refId?: string) => {
         try {
-            const folderPath = getStoragePath();
+            const ref = refId || formData.reference_id || 'SIN_REF';
+            const id = params.id as string;
+            const folderPath = `${ref}_${id}`;
+            
             const { data, error } = await supabase.storage.from('property_documents').list(folderPath);
             if (error) {
                 console.error("Error loading documents:", error);
@@ -595,7 +599,7 @@ export default function EditPropertyPage() {
             });
             if (error) throw error;
 
-            await loadDocuments();
+            await loadDocuments(formData.reference_id);
             alert("Documento subido con éxito.");
         } catch (error: any) {
             console.error("Error al subir documento:", error);
@@ -615,7 +619,7 @@ export default function EditPropertyPage() {
                 // Try fallback delete for old folder
                 await supabase.storage.from('property_documents').remove([`${params.id}/${fileName}`]);
             }
-            await loadDocuments();
+            await loadDocuments(formData.reference_id);
         } catch (error: any) {
             console.error("Error al eliminar documento:", error);
             alert("Error al eliminar: " + error.message);
@@ -1750,20 +1754,20 @@ export default function EditPropertyPage() {
                                                 <p className="text-xs text-slate-500">{(doc.metadata?.size / 1024).toFixed(1)} KB</p>
                                             </div>
                                         </div>
-                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex gap-1 shrink-0">
                                             <button
                                                 onClick={() => downloadDoc(doc.name)}
-                                                className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                                className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100 bg-white shadow-sm"
                                                 title="Ver / Descargar"
                                             >
-                                                <Download size={16} />
+                                                <Download size={14} />
                                             </button>
                                             <button
                                                 onClick={() => handleDocDelete(doc.name)}
-                                                className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                                className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-100 bg-white shadow-sm"
                                                 title="Eliminar"
                                             >
-                                                <Trash size={16} />
+                                                <Trash size={14} />
                                             </button>
                                         </div>
                                     </div>
