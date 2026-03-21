@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { createClient } from '@/utils/supabase/server';
 import PrintController from "./PrintController";
 import { WindowCardModel1 } from "@/components/documents/window-cards/WindowCardModel1";
 import { WindowCardModel2 } from "@/components/documents/window-cards/WindowCardModel2";
@@ -24,6 +25,13 @@ export default async function PropertyPrintPage(props: { params: Promise<{ id: s
     const searchParams = await props.searchParams;
     const format = searchParams.format === 'a3' ? 'a3' : 'a4';
     const model = searchParams.model || '1';
+
+    const supabaseServer = await createClient();
+    const { data: { user } } = await supabaseServer.auth.getUser();
+    
+    if (!user) {
+        redirect('/login');
+    }
 
     const property = await getProperty(id);
     if (!property) notFound();

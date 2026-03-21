@@ -75,16 +75,22 @@ export default function AdminPropertiesPage() {
     useEffect(() => {
         fetchProperties();
         
-        // Fetch User Role
+        // Fetch User Role - Better check
         const fetchRole = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', user.id)
-                    .single();
-                if (profile) setCurrentUserRole(profile.role);
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const user = session?.user;
+                if (user) {
+                    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+                    if (profile) {
+                        setCurrentUserRole(profile.role);
+                        return;
+                    }
+                }
+                setCurrentUserRole('agente');
+            } catch (err) {
+                console.error("Error fetching role:", err);
+                setCurrentUserRole('error');
             }
         };
         fetchRole();
@@ -397,14 +403,16 @@ export default function AdminPropertiesPage() {
                                         <Link href={`/admin/propiedades/editar/${property.id}`} className="flex-1 py-1 px-4 border-r border-slate-100 flex items-center justify-center gap-2 text-[#831832] text-xs font-black hover:bg-slate-100 transition-colors uppercase py-3">
                                             <Pencil size={15} /> Editar
                                         </Link>
-                                        {currentUserRole === 'admin' && (
-                                            <button 
-                                                onClick={() => handleDelete(property.id)} 
-                                                className="flex-1 py-1 px-4 flex items-center justify-center gap-2 text-red-500 text-xs font-bold hover:bg-red-50 transition-colors uppercase py-3"
-                                            >
-                                                <Trash2 size={15} /> Borrar
-                                            </button>
-                                        )}
+                                        <button 
+                                            onClick={() => handleDelete(property.id)}
+                                            disabled={currentUserRole === 'anon' || currentUserRole === null}
+                                            className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 text-xs font-bold transition-colors uppercase
+                                                ${(currentUserRole !== 'anon' && currentUserRole !== null) ? 'text-red-500 hover:bg-red-50' : 'text-slate-300 opacity-50 cursor-not-allowed'}
+                                            `}
+                                            title={(currentUserRole !== 'anon' && currentUserRole !== null) ? "Eliminar" : "Solo usuarios registrados pueden eliminar"}
+                                        >
+                                            <Trash2 size={15} /> Borrar
+                                        </button>
                                     </div>
                                 </div>
                             );
@@ -528,15 +536,16 @@ export default function AdminPropertiesPage() {
                                                 <Link href={`/admin/propiedades/editar/${property.id}`} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Editar">
                                                     <Pencil size={18} />
                                                 </Link>
-                                                {currentUserRole === 'admin' && (
-                                                    <button
-                                                        onClick={() => handleDelete(property.id)}
-                                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Eliminar"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                )}
+                                                <button
+                                                    onClick={() => handleDelete(property.id)}
+                                                    disabled={currentUserRole === 'anon' || currentUserRole === null}
+                                                    className={`p-2 rounded-lg transition-colors
+                                                        ${(currentUserRole !== 'anon' && currentUserRole !== null) ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-200 opacity-50 cursor-not-allowed'}
+                                                    `}
+                                                    title={(currentUserRole !== 'anon' && currentUserRole !== null) ? "Eliminar" : "Solo usuarios registrados pueden eliminar"}
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>

@@ -62,16 +62,6 @@ export function PropertyShareButton({ propertyTitle, propertyRef, propertyId, lo
         setIsOpen(false);
     };
 
-    const handlePrintA4 = () => {
-        window.open(`/propiedades/${propertyId}/print?format=a4`, '_blank');
-        setIsOpen(false);
-    };
-
-    const handlePrintA3 = () => {
-        window.open(`/propiedades/${propertyId}/print?format=a3`, '_blank');
-        setIsOpen(false);
-    };
-
     return (
         <div className="relative" ref={dropdownRef}>
             <button
@@ -124,60 +114,6 @@ export function PropertyShareButton({ propertyTitle, propertyRef, propertyId, lo
                     >
                         <Mail className="h-4 w-4 text-slate-600" />
                         Email
-                    </button>
-
-                    <div className="h-px bg-slate-100 my-1"></div>
-
-                    <button
-                        onClick={handlePrintA4}
-                        className="w-full text-left px-4 py-2 hover:bg-amber-50 flex items-center gap-3 text-sm text-slate-700 transition-colors"
-                        title={locale === 'en' ? "Print Window Card (A4 Portrait)" : "Imprimir tarjeta (A4 Vertical)"}
-                    >
-                        <Printer className="h-4 w-4 text-amber-600" />
-                        Window Card (A4)
-                    </button>
-
-                    <div className="h-px bg-slate-100 my-1"></div>
-                    <div className="px-4 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Modelos Escaparate A3</div>
-
-                    <button
-                        onClick={() => window.open(`/propiedades/${propertyId}/print?format=a3&model=1`, '_blank')}
-                        className="w-full text-left px-4 py-2 hover:bg-amber-50 flex items-center gap-3 text-sm text-slate-700 transition-colors"
-                    >
-                        <Printer className="h-4 w-4 text-amber-500" />
-                        Modelo 1: Burgundy Pro
-                    </button>
-
-                    <button
-                        onClick={() => window.open(`/propiedades/${propertyId}/print?format=a3&model=2`, '_blank')}
-                        className="w-full text-left px-4 py-2 hover:bg-amber-50 flex items-center gap-3 text-sm text-slate-700 transition-colors"
-                    >
-                        <Printer className="h-4 w-4 text-amber-500" />
-                        Modelo 2: Rejilla Lujo
-                    </button>
-
-                    <button
-                        onClick={() => window.open(`/propiedades/${propertyId}/print?format=a3&model=3`, '_blank')}
-                        className="w-full text-left px-4 py-2 hover:bg-amber-50 flex items-center gap-3 text-sm text-slate-700 transition-colors"
-                    >
-                        <Printer className="h-4 w-4 text-amber-500" />
-                        Modelo 3: Lujo Cinematográfico
-                    </button>
-
-                    <button
-                        onClick={() => window.open(`/propiedades/${propertyId}/print?format=a3&model=4`, '_blank')}
-                        className="w-full text-left px-4 py-2 hover:bg-amber-50 flex items-center gap-3 text-sm text-slate-700 transition-colors"
-                    >
-                        <Printer className="h-4 w-4 text-amber-500" />
-                        Modelo 4: Revista Elegante
-                    </button>
-
-                    <button
-                        onClick={() => window.open(`/propiedades/${propertyId}/print?format=a3&model=5`, '_blank')}
-                        className="w-full text-left px-4 py-2 hover:bg-amber-50 flex items-center gap-3 text-sm text-slate-700 transition-colors"
-                    >
-                        <Printer className="h-4 w-4 text-amber-500" />
-                        Modelo 5: Diamante Luminoso
                     </button>
                 </div>
             )}

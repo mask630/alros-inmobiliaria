@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Save, ImageIcon, Loader2, Sparkles, Wand2, FolderSearch, MapPin, ExternalLink, UploadCloud, File, Trash, Download, Plus, FileText, FileSignature } from "lucide-react";
+import { Save, ImageIcon, Loader2, Sparkles, Wand2, FolderSearch, MapPin, ExternalLink, UploadCloud, File, Trash, Download, Plus, FileText, FileSignature, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useParams } from "next/navigation";
@@ -24,6 +24,7 @@ export default function EditPropertyPage() {
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [mapPreviewMode, setMapPreviewMode] = useState<'coords' | 'address'>('coords');
+    const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
     const [owners, setOwners] = useState<any[]>([]); // New state for owners
     const [agents, setAgents] = useState<any[]>([]); // New state for agents
 
@@ -296,6 +297,23 @@ export default function EditPropertyPage() {
             }
         };
         fetchData();
+
+        // Fetch user role
+        const fetchRole = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+                    setCurrentUserRole(profile?.role || 'agente');
+                } else {
+                    setCurrentUserRole('anon');
+                }
+            } catch (e) {
+                console.error("Error fetching role:", e);
+                setCurrentUserRole('error');
+            }
+        };
+        fetchRole();
     }, [params.id]);
 
     // Sync local input state when formData changes (e.g. from randomize button)
@@ -652,6 +670,10 @@ export default function EditPropertyPage() {
     const generateDescription = () => {
         const typeLabel = formData.subtypes.length > 0 ? formData.subtypes.join(' y ') : formData.type;
         const featuresList = [];
+        const expenses = [];
+        if (formData.community_fees) expenses.push(`Comunidad: ${formData.community_fees} €/mes`);
+        if (formData.ibi) expenses.push(`IBI: ${formData.ibi} €/año`);
+        if (formData.garbage_tax) expenses.push(`Basura: ${formData.garbage_tax} €/año`);
 
         const getVistasText = (type: string) => {
             if (!type || type === 'despejadas') return "vistas despejadas";
@@ -725,13 +747,11 @@ export default function EditPropertyPage() {
         text += `Esta propiedad representa una excelente opción tanto para residencia habitual como para inversión, dada la alta rentabilidad y revalorización de la zona. \n\n`;
         text += `No deje escapar esta oportunidad. Póngase en contacto con nosotros para concertar una visita o recibir más información. En Alros Inmobiliaria, le acompañamos en cada paso para encontrar su hogar ideal.`;
 
-        const expenses = [];
-        if (formData.community_fees) expenses.push(`Comunidad: ${formData.community_fees} €/mes`);
-        if (formData.ibi) expenses.push(`IBI: ${formData.ibi} €/año`);
-        if (formData.garbage_tax) expenses.push(`Basura: ${formData.garbage_tax} €/año`);
         if (expenses.length > 0) {
             text += `\n\n* Gastos de la propiedad: ${expenses.join(' | ')}`;
         }
+
+        setFormData(prev => ({ ...prev, description: text }));
 
         // Title generation (SHOUTY + ATTRACTIVE)
         const typeBase = typeLabel.split(' ')[0] || formData.type;
@@ -841,6 +861,45 @@ export default function EditPropertyPage() {
         if (titleEn.length > 100) titleEn = titleEn.substring(0, 97) + "...";
 
         setFormData(prev => ({ ...prev, description: text, title: title, description_en: textEn, title_en: titleEn }));
+    };
+
+    const handleDelete = async () => {
+        if (!confirm("⚠️ ¿ESTÁS SEGURO?\n\nEsta acción es IRREVERSIBLE.\n\nSe borrará:\n1. La ficha del sistema\n2. Todas las FOTOS en la nube\n3. Toda la DOCUMENTACIÓN privada")) return;
+        
+        setLoading(true);
+        try {
+            const propertyId = params.id as string;
+            const ref = formData.reference_id || 'SIN_REF';
+            
+            // 1. Clean Images (property_images bucket)
+            if (ref && ref !== 'SIN_REF') {
+                const { data: imageFiles } = await supabase.storage.from('property_images').list(ref);
+                if (imageFiles && imageFiles.length > 0) {
+                    const paths = imageFiles.map(f => `${ref}/${f.name}`);
+                    await supabase.storage.from('property_images').remove(paths);
+                }
+            }
+
+            // 2. Clean Documents (property_documents bucket)
+            const docFolder = getStoragePath();
+            const { data: docFiles } = await supabase.storage.from('property_documents').list(docFolder);
+            if (docFiles && docFiles.length > 0) {
+                const paths = docFiles.map(f => `${docFolder}/${f.name}`);
+                await supabase.storage.from('property_documents').remove(paths);
+            }
+
+            // 3. Delete from DB
+            const { error } = await supabase.from('properties').delete().eq('id', propertyId);
+            if (error) throw error;
+            
+            router.push('/admin/propiedades');
+            router.refresh();
+        } catch (err: any) {
+            console.error(err);
+            alert("Error al eliminar por completo: " + err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleSubmit = async () => {
@@ -971,15 +1030,29 @@ export default function EditPropertyPage() {
 
     if (fetching) return <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
 
+    // DEBUG: Log role to console for user
+    console.log("ALROS DEBUG: Current Role =", currentUserRole);
+
     return (
         <div className="container mx-auto px-4 py-8 max-w-6xl pb-32">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 leading-tight">Editar Propiedad</h1>
-                    <p className="text-sm text-slate-500">Modificando la ficha del inmueble.</p>
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-slate-900 leading-tight">Editar Propiedad</h1>
+                    </div>
+                    <p className="text-sm text-slate-500 font-medium">Modificando la ficha del inmueble.</p>
                 </div>
 
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                    {/* Botón de borrado forzado (sin guardas para admins/agentes logueados) */}
+                    <button
+                        onClick={handleDelete}
+                        disabled={loading}
+                        className="p-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center justify-center shadow-lg shadow-red-500/20"
+                        title="Borrar Propiedad y Documentos"
+                    >
+                        {loading ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
+                    </button>
                     <Link href={`/admin/propiedades/contrato/${params.id}`} className="flex-1 md:flex-none justify-center px-4 py-2 border border-blue-300 text-blue-700 font-bold text-sm rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2">
                         <span>📄 Contrato</span>
                     </Link>
@@ -1776,7 +1849,7 @@ export default function EditPropertyPage() {
                         )}
                     </section>
 
-                    <div className="flex justify-center pt-8">
+                    <div className="flex flex-col md:flex-row justify-center items-center gap-4 pt-8 pb-20">
                         <button
                             onClick={handleSubmit}
                             disabled={loading || successMsg !== null}
@@ -1785,6 +1858,17 @@ export default function EditPropertyPage() {
                             {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                             {loading ? 'Guardando...' : successMsg ? '¡Cambios guardados! ✅' : 'Actualizar Propiedad'}
                         </button>
+                        
+                        
+                            <button
+                                onClick={handleDelete}
+                                disabled={loading}
+                                className="w-full md:w-auto px-6 py-2.5 text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                            >
+                                <Trash2 size={18} />
+                                Eliminar Ficha Completa
+                            </button>
+                        
                     </div>
                 </div>
             </div>

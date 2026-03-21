@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft, Mail, Phone, MapPin, Building, Calendar, Edit, FileText, ExternalLink } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Building, Calendar, Edit, FileText, ExternalLink, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import DeleteOwnerButton from "@/components/admin/DeleteOwnerButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -58,13 +59,16 @@ export default async function DetallePropietarioPage({ params }: { params: Promi
                     </div>
                 </div>
 
-                <Link
-                    href={`/admin/propietarios/editar/${owner.id}`}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm"
-                >
-                    <Edit size={18} />
-                    Modificar Datos
-                </Link>
+                <div className="flex items-center gap-3">
+                    <Link
+                        href={`/admin/propietarios/editar/${owner.id}`}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm"
+                    >
+                        <Edit size={18} />
+                        Modificar Datos
+                    </Link>
+                    <DeleteOwnerButton id={owner.id} name={owner.nombre_completo} propCount={properties?.length || 0} />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -16,16 +16,25 @@ export default function PropietariosPage() {
     useEffect(() => {
         fetchOwners();
 
-        // Fetch User Role
+        // Fetch User Role - Improved robustness
         const fetchRole = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', user.id)
-                    .single();
-                if (profile) setCurrentUserRole(profile.role);
+            try {
+                // First check session for quick response
+                const { data: { session } } = await supabase.auth.getSession();
+                const user = session?.user;
+                
+                if (user) {
+                    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+                    if (profile) {
+                        setCurrentUserRole(profile.role);
+                        console.log("ALROS DEBUG: Role set to", profile.role);
+                        return;
+                    }
+                }
+                setCurrentUserRole('agente'); // Default for logged in
+            } catch (err) {
+                console.error("Error fetching role:", err);
+                setCurrentUserRole('error');
             }
         };
         fetchRole();
@@ -51,31 +60,52 @@ export default function PropietariosPage() {
     };
 
     const handleDelete = async (id: string, name: string, propCount: number = 0) => {
-        let msg = `¿Estás seguro de que quieres eliminar al propietario "${name}"?`;
-        
         if (propCount > 0) {
-            msg = `⚠️ CUIDADO: El propietario "${name}" tiene ${propCount} propiedades asignadas.\n\n` +
-                  `Si lo borras, estas propiedades se quedarán "huérfanas" (sin dueño asignado).\n\n` +
-                  `¿Estás seguro de que quieres continuar?`;
-        } else {
-            msg += ` Esta acción no se puede deshacer.`;
-        }
-
-        if (!confirm(msg)) return;
-
-        try {
-            const { error } = await supabase
-                .from('propietarios')
-                .delete()
-                .eq('id', id);
-
-            if (error) throw error;
+            const choice = confirm(
+                `⚠️ ELIMINACIÓN DE PROPIETARIO: "${name}"\n\n` +
+                `Este propietario tiene ${propCount} propiedades asignadas. ¿Cómo quieres gestionarlas?\n\n` +
+                `- ACEPTAR: Borrar propietario y reasociar sus propiedades a "OFICINA/STOCK" (Recomendado).\n` +
+                `- CANCELAR: Abortar operación.`
+            );
             
-            // Re-fetch owners or remove from state locally
-            setOwners(prev => prev.filter(o => o.id !== id));
-        } catch (error) {
-            console.error('Error deleting owner:', error);
-            alert('Error al eliminar el propietario. Es posible que tenga registros relacionados importantes.');
+            if (!choice) return;
+
+            try {
+                // 1. Reassign properties to null or a generic ID if you have one. 
+                // For now, setting owner_id to null makes them "orphaned" but we can mark them 
+                // in the UI as "Stock Alros" if owner_id is missing.
+                const { error: updateError } = await supabase
+                    .from('properties')
+                    .update({ owner_id: null })
+                    .eq('owner_id', id);
+
+                if (updateError) throw updateError;
+
+                // 2. Delete the owner
+                const { error: deleteError } = await supabase
+                    .from('propietarios')
+                    .delete()
+                    .eq('id', id);
+
+                if (deleteError) throw deleteError;
+                
+                setOwners(prev => prev.filter(o => o.id !== id));
+                alert('Propietario eliminado. Sus propiedades ahora figuran como "Sin propietario asignado" (Stock de Oficina).');
+            } catch (err) {
+                console.error('Error during deletion:', err);
+                alert('Error al procesar la baja.');
+            }
+        } else {
+            if (!confirm(`¿Estás seguro de que quieres eliminar al propietario "${name}"? Esta acción no se puede deshacer.`)) return;
+            
+            try {
+                const { error } = await supabase.from('propietarios').delete().eq('id', id);
+                if (error) throw error;
+                setOwners(prev => prev.filter(o => o.id !== id));
+            } catch (err) {
+                console.error('Error deleting owner:', err);
+                alert('Error al eliminar.');
+            }
         }
     };
 
@@ -246,18 +276,21 @@ export default function PropietariosPage() {
                                             >
                                                 <Edit size={16} />
                                             </Link>
-                                            {currentUserRole === 'admin' && (
-                                                <button
-                                                    onClick={() => {
-                                                        const pCount = (owner as any).properties_count?.[0]?.count || 0;
-                                                        handleDelete(owner.id, owner.nombre_completo, pCount);
-                                                    }}
-                                                    className="p-1.5 bg-red-50 border border-red-100 hover:bg-red-100 hover:border-red-200 rounded text-red-600 transition-colors"
-                                                    title="Eliminar Propietario"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    const pCount = (owner as any).properties_count?.[0]?.count || 0;
+                                                    handleDelete(owner.id, owner.nombre_completo, pCount);
+                                                }}
+                                                disabled={currentUserRole === 'anon' || currentUserRole === null}
+                                                className={`p-1.5 rounded transition-colors ${
+                                                    (currentUserRole !== 'anon' && currentUserRole !== null) 
+                                                        ? 'bg-red-50 border border-red-100 hover:bg-red-100 hover:border-red-200 text-red-600' 
+                                                        : 'bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed'
+                                                }`}
+                                                title={(currentUserRole !== 'anon' && currentUserRole !== null) ? "Eliminar Propietario" : "Solo usuarios registrados pueden eliminar"}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>

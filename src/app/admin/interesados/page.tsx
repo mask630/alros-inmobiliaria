@@ -60,16 +60,22 @@ export default function InteresadosPage() {
     useEffect(() => {
         fetchSummaryStats();
 
-        // Fetch User Role
+        // Fetch User Role - Robust check
         const fetchRole = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', user.id)
-                    .single();
-                if (profile) setCurrentUserRole(profile.role);
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const user = session?.user;
+                if (user) {
+                    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+                    if (profile) {
+                        setCurrentUserRole(profile.role);
+                        return;
+                    }
+                }
+                setCurrentUserRole('agente');
+            } catch (err) {
+                console.error("Error fetching role:", err);
+                setCurrentUserRole('error');
             }
         };
         fetchRole();
@@ -375,15 +381,17 @@ export default function InteresadosPage() {
                             >
                                 Baja
                             </button>
-                            {currentUserRole === 'admin' && (
-                                <button 
-                                    onClick={handleBatchDelete}
-                                    className="flex-1 md:flex-none px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
-                                >
-                                    <Trash2 size={14} />
-                                    <span>Eliminar Definitivo</span>
-                                </button>
-                            )}
+                            <button 
+                                onClick={handleBatchDelete}
+                                disabled={currentUserRole === 'anon' || currentUserRole === null}
+                                className={`flex-1 md:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5
+                                    ${(currentUserRole !== 'anon' && currentUserRole !== null) ? 'bg-red-500 hover:bg-red-600 border border-red-600' : 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600'}
+                                `}
+                                title={(currentUserRole !== 'anon' && currentUserRole !== null) ? "Eliminar Definitivo" : "Solo usuarios registrados pueden eliminar"}
+                            >
+                                <Trash2 size={14} />
+                                <span>Eliminar Definitivo</span>
+                            </button>
                         </div>
                         <button 
                             onClick={() => setSelectedIds([])}
@@ -640,15 +648,16 @@ export default function InteresadosPage() {
                                                     <Link href={`/admin/interesados/editar/${lead.id}`} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-all" title="Editar">
                                                         <Edit size={18} />
                                                     </Link>
-                                                    {currentUserRole === 'admin' && (
-                                                        <button 
-                                                            onClick={() => handleDeleteOne(lead.id, lead.nombre_completo)}
-                                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded-lg transition-all" 
-                                                            title="Eliminar Permanente"
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </button>
-                                                    )}
+                                                    <button 
+                                                        onClick={() => handleDeleteOne(lead.id, lead.nombre_completo)}
+                                                        disabled={currentUserRole === 'anon' || currentUserRole === null}
+                                                        className={`p-2 rounded-lg transition-all
+                                                            ${(currentUserRole !== 'anon' && currentUserRole !== null) ? 'text-slate-400 hover:text-red-600 hover:bg-slate-100' : 'text-slate-200 cursor-not-allowed opacity-50'}
+                                                        `}
+                                                        title={(currentUserRole !== 'anon' && currentUserRole !== null) ? "Eliminar Permanente" : "Solo usuarios registrados pueden eliminar"}
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>

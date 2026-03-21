@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowLeft, Mail, Phone, MapPin, Edit, FileText, Calendar, Building, Euro, BedDouble, Info, Clock, ExternalLink, MessageSquare, Globe, User, Home, ClipboardList, MessageCircle } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Edit, FileText, Calendar, Building, Euro, BedDouble, Info, Clock, ExternalLink, MessageSquare, Globe, User, Home, ClipboardList, MessageCircle, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import MatchingProperties from "@/components/leads/MatchingProperties";
+import DeleteLeadButton from "@/components/admin/DeleteLeadButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +71,7 @@ export default async function DetalleInteresadoPage({ params }: { params: Promis
                         <Edit size={16} />
                         Editar Ficha
                     </Link>
+                    <DeleteLeadButton id={lead.id} name={lead.nombre_completo} />
                 </div>
             </div>
 
